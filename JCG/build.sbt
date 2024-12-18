@@ -124,6 +124,14 @@ lazy val jcg_doop_testadapter = project.settings(
     jcg_testadapter_commons
 )
 
+lazy val jcg_native_image_testadapter = project.settings(
+    commonSettings,
+    name := "JCG Native Image Test Adapter",
+    libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.2",
+    assembly / aggregate := false,
+    publishArtifact := false
+).dependsOn(jcg_testadapter_commons)
+
 lazy val jcg_dynamic_testadapter = project.settings(
     commonSettings,
     name := "JCG Dynamic Test Adapter",
@@ -167,5 +175,6 @@ lazy val jcg_evaluation = project.settings(
     jcg_code2flow_testadapter,
     jcg_tajs_testadapter,
     jcg_pycg_testadapter,
-    jcg_dynamic_testadapter
+    jcg_dynamic_testadapter,
+    jcg_native_image_testadapter
 )

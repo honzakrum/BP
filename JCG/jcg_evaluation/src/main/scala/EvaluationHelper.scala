@@ -198,7 +198,7 @@ object CommonEvaluationConfig {
 }
 
 object EvaluationHelper {
-    val ALL_JAVA_ADAPTERS: List[JavaTestAdapter] = List(SootJCGAdapter, WalaJCGAdapter, OpalJCGAdatper, DoopAdapter)
+    val ALL_JAVA_ADAPTERS: List[JavaTestAdapter] = List(SootJCGAdapter, WalaJCGAdapter, OpalJCGAdatper, DoopAdapter, NativeImageJCGAdapter)
     val ALL_JS_ADAPTERS: List[JSTestAdapter] = List(JSCallGraphAdapter, Code2flowCallGraphAdapter, TAJSJCGAdapter)
     val ALL_PY_ADAPTERS: List[PyTestAdapter] = List(PyCGAdapter)
 
@@ -216,6 +216,7 @@ object EvaluationHelper {
 
     def getJRELocations(jreLocationsPath: String): Map[Int, String] = {
         val jreLocationsFile = new File(jreLocationsPath)
+        //throw new IllegalArgumentException(jreLocationsPath)
         assert(jreLocationsFile.exists(), "please provide a jre.conf file")
         val jreLocations = JRELocation.mapping(jreLocationsFile)
         jreLocations

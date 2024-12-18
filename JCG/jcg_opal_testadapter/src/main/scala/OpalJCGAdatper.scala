@@ -14,9 +14,9 @@ import org.opalj.br.analyses.DeclaredMethodsKey
 import org.opalj.br.analyses.Project
 import org.opalj.br.analyses.Project.JavaClassFileReader
 import org.opalj.br.fpcf.PropertyStoreKey
-import org.opalj.br.fpcf.properties.cg.Callees
-import org.opalj.br.fpcf.properties.cg.NoCallees
-import org.opalj.br.fpcf.properties.cg.NoCalleesDueToNotReachableMethod
+import org.opalj.tac.fpcf.properties.cg.Callees
+import org.opalj.tac.fpcf.properties.cg.NoCallees
+import org.opalj.tac.fpcf.properties.cg.NoCalleesDueToNotReachableMethod
 import org.opalj.br.instructions.MethodInvocationInstruction
 import org.opalj.fpcf.FinalEP
 import org.opalj.fpcf.PropertyStore
