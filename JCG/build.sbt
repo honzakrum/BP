@@ -7,7 +7,7 @@ ThisBuild / libraryDependencySchemes ++= Seq(
 )
 
 lazy val commonSettings = Seq(
-    scalaVersion := "2.13.8",
+    scalaVersion := "2.13.11",
     organization := "de.opal-project",
     homepage := Some(url("https://bitbucket.org/delors/jcg")),
     licenses := Seq("BSD-2-Clause" -> url("http://opensource.org/licenses/BSD-2-Clause")),
