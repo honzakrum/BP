@@ -1,7 +1,11 @@
-import java.io.Writer
-import java.nio.file.{Files, Paths, Path, StandardCopyOption}
+import java.io.{File, PrintWriter, Writer}
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import scala.sys.process._
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
+// csv format
+import play.api.libs.json.{Format, Json}
+import org.apache.commons.csv.{CSVFormat, CSVParser}
+import scala.jdk.CollectionConverters._
 
 object NativeImageJCGAdapter extends JavaTestAdapter {
 
@@ -18,6 +22,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
     ): Long = {
         val startTime = System.nanoTime()
 
+
         println(s"Input: $inputDirPath")
         val graalJavaPath = Paths.get("/home/krumi/.sdkman/candidates/java/25.ea.8-graal/bin/java")
         val nativeImagePath = Paths.get("/home/krumi/.sdkman/candidates/java/25.ea.8-graal/bin/native-image")
@@ -28,17 +33,60 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val jarFileName = jarPath.getFileName.toString
         val configOutputDir = configDirectory.resolve(jarFileName.stripSuffix(".jar"))
 
-        // Create configuration files that could be necessary for reflection etc
-        createConfig(jarPath, configOutputDir, graalJavaPath)
+        if(jarFileName == "CFNE1.jar") // just one test
+        {
+        try {
+            // Create configuration files that could be necessary for reflection etc
+            //createConfig(jarPath, configOutputDir, graalJavaPath)
 
-        // Generate call graph for current test case
-        generateCallGraph(jarPath, configDirectory, nativeImagePath)
+            // Generate call graph for current test case
+            //generateCallGraph(jarPath, configDirectory, nativeImagePath)
 
-        // Cleanup
-        cleanArtifact(jarFileName)
+            // Cleanup
+            //cleanArtifact(jarFileName)
 
-        // TODO output serialised json call graphs
-        output.close()
+            // Serialization
+            // Read CSV files
+            val testFolderName = "./CallGraphs/" + jarFileName.stripSuffix(".jar")
+            println(s"Test folder name: $testFolderName")
+            val methodsCsv = readCsv(s"$testFolderName/call_tree_methods.csv")
+            val invocationsCsv = readCsv(s"$testFolderName/call_tree_invokes.csv")
+            val targetsCsv = readCsv(s"$testFolderName/call_tree_targets.csv")
+
+            println("parsing")
+            // Parse CSV data
+            println("methods")
+            val methods = parseMethods(methodsCsv)
+            println("invokes")
+            val invocations = parseInvocations(invocationsCsv)
+            println("targets")
+            val targets = parseTargets(targetsCsv)
+
+            println("building")
+            // Build call graph
+            val callGraph = buildCallGraph(methods, invocations, targets)
+
+            println("serializing")
+            // Serialize to JSON
+            val json = serializeCallGraph(callGraph)
+
+            // debug
+            val file = new File("output.txt")
+            val writer = new PrintWriter(file)
+            writer.println(json)
+            writer.close()
+
+            output.write(json)
+
+        } catch {
+            case e: Exception =>
+                println(s"Unexpected error: ${e.getClass.getName} - ${e.getMessage}")
+                e.printStackTrace()
+        } finally {
+            output.close()
+        }
+        }
+
 
         System.nanoTime() - startTime
     }
@@ -121,4 +169,156 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
             Files.delete(executablePath) // Delete the executable
         }
     }
+
+    // JSON Formats
+    object JsonFormats {
+        implicit val declaredTargetFormat: Format[NativeImageDeclaredTarget] = Json.format[NativeImageDeclaredTarget]
+        implicit val methodInfoFormat: Format[NativeImageMethodInfo] = Json.format[NativeImageMethodInfo]
+        implicit val callSiteFormat: Format[NativeImageCallSite] = Json.format[NativeImageCallSite]
+        implicit val callGraphFormat: Format[NativeImageCallGraph] = Json.format[NativeImageCallGraph]
+    }
+
+    // CSV Parsing and Mapping Logic
+    def readCsv(filePath: String): List[Map[String, String]] = {
+        val reader = Files.newBufferedReader(Paths.get(filePath))
+        val csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())
+        csvParser.asScala.map(_.toMap.asScala.toMap).toList
+    }
+
+    def parseMethods(csvData: List[Map[String, String]]): List[NativeImageMethod] = {
+        csvData.map { row =>
+            NativeImageMethod(
+                id = row("Id").toInt,
+                name = row("Name"),
+                declaringClass = row("Type"),
+                parameterTypes = row("Parameters"),
+                returnType = row("Return"),
+                display = row("Display"),
+                flags = row("Flags"),
+                isEntryPoint = row("IsEntryPoint").toBoolean
+            )
+        }
+    }
+
+    def parseInvocations(csvData: List[Map[String, String]]): List[NativeImageInvocation] = {
+        csvData.map { row =>
+            NativeImageInvocation(
+                id = row("Id").toInt,
+                methodId = row("MethodId").toInt,
+                bytecodeIndexes = row("BytecodeIndexes"),
+                targetId = row("TargetId").toInt,
+                isDirect = row("IsDirect").toBoolean
+            )
+        }
+    }
+
+    def parseTargets(csvData: List[Map[String, String]]): List[NativeImageTarget] = {
+        csvData.map { row =>
+            NativeImageTarget(
+                invokeId = row("InvokeId").toInt,
+                targetId = row("TargetId").toInt
+            )
+        }
+    }
+
+    def buildCallGraph(methods: List[NativeImageMethod], invocations: List[NativeImageInvocation], targets: List[NativeImageTarget]): NativeImageCallGraph = {
+        val callSites = invocations.map { invocation =>
+            val method = methods.find(_.id == invocation.methodId).get
+            val targetMethod = methods.find(_.id == invocation.targetId).get
+
+            NativeImageCallSite(
+                declaredTarget = NativeImageDeclaredTarget(
+                    name = targetMethod.name,
+                    parameterTypes = targetMethod.parameterTypes.split(" ").map(toJvmTypeDescriptor).toList,
+                    returnType = toJvmTypeDescriptor(targetMethod.returnType),
+                    declaringClass = toJvmTypeDescriptor(targetMethod.declaringClass)
+                ),
+                method = NativeImageMethodInfo(
+                    name = method.name,
+                    parameterTypes = method.parameterTypes.split(" ").map(toJvmTypeDescriptor).toList,
+                    returnType = toJvmTypeDescriptor(method.returnType),
+                    declaringClass = toJvmTypeDescriptor(method.declaringClass)
+                ),
+                line = -1, // Hardcode the line field to -1
+                targets = List(NativeImageDeclaredTarget(
+                    name = targetMethod.name,
+                    parameterTypes = targetMethod.parameterTypes.split(" ").map(toJvmTypeDescriptor).toList,
+                    returnType = toJvmTypeDescriptor(targetMethod.returnType),
+                    declaringClass = toJvmTypeDescriptor(targetMethod.declaringClass)
+                ))
+            )
+        }
+
+        NativeImageCallGraph(callSites)
+    }
+
+    def serializeCallGraph(callGraph: NativeImageCallGraph): String = {
+        import JsonFormats._
+        Json.prettyPrint(Json.toJson(callGraph))
+    }
+
+    def toJvmTypeDescriptor(className: String): String = {
+        if (className == "void") "V"
+        else if (className == "int") "I"
+        else if (className == "boolean") "Z"
+        else if (className == "byte") "B"
+        else if (className == "char") "C"
+        else if (className == "short") "S"
+        else if (className == "long") "J"
+        else if (className == "float") "F"
+        else if (className == "double") "D"
+        else if (className == "empty") "" // Handle empty parameter types
+        else s"L${className.replace('.', '/')};"
+    }
 }
+
+// Case Classes
+case class NativeImageMethod(
+                   id: Int,
+                   name: String,
+                   declaringClass: String,
+                   parameterTypes: String,
+                   returnType: String,
+                   display: String,
+                   flags: String,
+                   isEntryPoint: Boolean
+                 )
+
+case class NativeImageInvocation(
+                       id: Int,
+                       methodId: Int,
+                       bytecodeIndexes: String,
+                       targetId: Int,
+                       isDirect: Boolean
+                     )
+
+case class NativeImageTarget(
+                   invokeId: Int,
+                   targetId: Int
+                 )
+
+case class NativeImageDeclaredTarget(
+                           name: String,
+                           parameterTypes: List[String],
+                           returnType: String,
+                           declaringClass: String
+                         )
+
+case class NativeImageMethodInfo(
+                       name: String,
+                       parameterTypes: List[String],
+                       returnType: String,
+                       declaringClass: String
+                     )
+
+case class NativeImageCallSite(
+                     declaredTarget: NativeImageDeclaredTarget,
+                     method: NativeImageMethodInfo,
+                     line: Int, // Use an Int for the line field
+                     targets: List[NativeImageDeclaredTarget]
+                   )
+
+case class NativeImageCallGraph(
+                      callSites: List[NativeImageCallSite]
+                    )
+
