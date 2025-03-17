@@ -1,5 +1,5 @@
 import java.io.Writer
-import java.nio.file.{Files, Paths, Path}
+import java.nio.file.{Files, Paths, Path, StandardCopyOption}
 import scala.sys.process._
 import scala.util.{Try, Success, Failure}
 
@@ -32,10 +32,10 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         createConfig(jarPath, configOutputDir, graalJavaPath)
 
         // Generate call graph for current test case
-        //generateCallGraph(jarPath, configDirectory, nativeImagePath)
+        generateCallGraph(jarPath, configDirectory, nativeImagePath)
 
         // Cleanup
-        //cleanArtifact(jarFileName)
+        cleanArtifact(jarFileName)
 
         // TODO output serialised json call graphs
         output.close()
@@ -76,21 +76,35 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
      * @param nativeImagePath The path to Native Image executable.
      */
     def generateCallGraph(jarFile: Path, configOutputDir: Path, nativeImagePath : Path): Unit = {
-       val nativeImageCommand = Seq(
-            nativeImagePath.toString,
-            "-H:+UnlockExperimentalVMOptions",
-            "-H:PrintAnalysisCallTreeType=CSV",
-            s"-H:ConfigurationFileDirectories=${configOutputDir.toString}",
-            "-jar",
-            jarFile.toString
+
+        val nativeImageCommand = Seq(
+              nativeImagePath.toString,
+              "-H:+UnlockExperimentalVMOptions",
+              "-H:PrintAnalysisCallTreeType=CSV",
+              s"-H:ConfigurationFileDirectories=${configOutputDir.toString}",
+              "-jar",
+              jarFile.toString
         )
 
+        // Generating call graphs
         println(s"Running native-image command: ${nativeImageCommand.mkString(" ")}")
         val nativeImageResult = Try(nativeImageCommand.!!)
         nativeImageResult match {
             case Success(output) =>
                 println(s"Call graph generated for ${jarFile.getFileName}:\n$output")
             case Failure(e) => println(s"Failed to generate call graph for ${jarFile.getFileName}: ${e.getMessage}")
+        }
+
+        // Moving them to their own folder for each test case
+        val callGraphDir = Paths.get("./CallGraphs").resolve(jarFile.getFileName.toString.stripSuffix(".jar"))
+        Files.createDirectories(callGraphDir)
+        val reportsFolder = Paths.get("./reports")
+        if (Files.exists(reportsFolder)) {
+            // Move the folder
+            Files.move(reportsFolder, callGraphDir, StandardCopyOption.REPLACE_EXISTING)
+            println(s"Moved folder from $reportsFolder to $callGraphDir")
+        } else {
+            println(s"Source folder $reportsFolder does not exist.")
         }
     }
 
