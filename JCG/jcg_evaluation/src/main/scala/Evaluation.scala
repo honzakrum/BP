@@ -166,7 +166,11 @@ object Evaluation {
 
                 } catch {
                     case e: Throwable =>
-                        println(s"exception in project ${projectSpec.name}")
+                        println(s"Exception in project ${projectSpec.name}:")
+                        println(s"Exception type: ${e.getClass.getName}")
+                        println(s"Exception message: ${e.getMessage}")
+                        println("Stack trace:")
+                        e.printStackTrace()
                         if (config.DEBUG) {
                             e.printStackTrace()
                         }
