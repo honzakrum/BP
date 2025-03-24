@@ -12,7 +12,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
     // Implementation
     val frameworkName: String = "NativeImage"
 
-    val possibleAlgorithms: Array[String] = Array("RTA") // points-to, RTA
+    val possibleAlgorithms: Array[String] = Array("PTA") // points-to
 
     def serializeCG(
         algorithm:      String,
@@ -33,17 +33,17 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val jarFileName = jarPath.getFileName.toString
         val configOutputDir = configDirectory.resolve(jarFileName.stripSuffix(".jar"))
 
-        if(jarFileName == "CFNE1.jar") // just one test
+        if(jarFileName == "CFNE1.jar" || jarFileName == "CFNE2.jar") // just a few
         {
         try {
             // Create configuration files that could be necessary for reflection etc
-            //createConfig(jarPath, configOutputDir, graalJavaPath)
+            createConfig(jarPath, configOutputDir, graalJavaPath)
 
             // Generate call graph for current test case
-            //generateCallGraph(jarPath, configDirectory, nativeImagePath)
+            generateCallGraph(jarPath, configDirectory, nativeImagePath)
 
             // Cleanup
-            //cleanArtifact(jarFileName)
+            cleanArtifact(jarFileName)
 
             // Serialization
             // Read CSV files
