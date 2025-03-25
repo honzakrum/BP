@@ -158,22 +158,22 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         }
     }
 
-    // JSON Formats
-    object JsonFormats {
-        implicit val methodFormat: Format[Method] = Json.format[Method]
-        implicit val callSiteFormat: Format[CallSite] = Json.format[CallSite]
-        implicit val reachableMethodFormat: Format[ReachableMethod] = Json.format[ReachableMethod]
-        implicit val reachableMethodsFormat: Format[ReachableMethods] = Json.format[ReachableMethods]
-    }
-
-    // CSV Parsing and Mapping Logic
+    /**
+     * Parses CSV file into a list.
+     *
+     * @param filePath The name of the .csv file.
+     */
     def readCsv(filePath: String): List[Map[String, String]] = {
         val reader = Files.newBufferedReader(Paths.get(filePath))
         val csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())
         csvParser.asScala.map(_.toMap.asScala.toMap).toList
     }
 
-    // CSV Parsing and Mapping Logic
+    /**
+     * Maps CSV list of methods into individual methods.
+     *
+     * @param csvData Methods data from the generated csv.
+     */
     def parseMethods(csvData: List[Map[String, String]]): List[NativeImageMethod] = {
         csvData.map { row =>
             NativeImageMethod(
@@ -189,6 +189,11 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         }
     }
 
+    /**
+     * Maps CSV list of invokes into individual invokes.
+     *
+     * @param csvData Invokes data from the generated csv.
+     */
     def parseInvocations(csvData: List[Map[String, String]]): List[NativeImageInvocation] = {
         csvData.map { row =>
             NativeImageInvocation(
@@ -201,6 +206,12 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         }
     }
 
+    /**
+     * Maps CSV list of targets into individual targets.
+     * Targets are used for connecting methods with invokes.
+     *
+     * @param csvData Targets data from the generated csv.
+     */
     def parseTargets(csvData: List[Map[String, String]]): List[NativeImageTarget] = {
         csvData.map { row =>
             NativeImageTarget(
