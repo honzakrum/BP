@@ -33,8 +33,8 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val jarFileName = jarPath.getFileName.toString
         val configOutputDir = configDirectory.resolve(jarFileName.stripSuffix(".jar"))
 
-        if(jarFileName == "CFNE1.jar" || jarFileName == "CFNE2.jar") // just a few
-        {
+        //if(jarFileName == "CFNE1.jar" || jarFileName == "CFNE2.jar") // just a few
+        //{
             try {
                 // Create configuration files that could be necessary for reflection etc
                 //createConfig(jarPath, configOutputDir, graalJavaPath)
@@ -53,31 +53,19 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
                 val invocationsCsv = readCsv(s"$testFolderName/call_tree_invokes.csv")
                 val targetsCsv = readCsv(s"$testFolderName/call_tree_targets.csv")
 
-                println("parsing")
                 // Parse CSV data
-                println("methods")
                 val methods = parseMethods(methodsCsv)
-                println("invokes")
                 val invocations = parseInvocations(invocationsCsv)
-                println("targets")
                 val targets = parseTargets(targetsCsv)
 
-                println("building")
                 // Build call graph
                 val callGraph = buildCallGraph(methods, invocations, targets)
 
-                println("serializing")
                 // Serialize to JSON
                 val json = serializeCallGraph(callGraph)
-
-                // debug
-                val file = new File("output.txt")
-                val writer = new PrintWriter(file)
-                writer.println(json)
-                writer.close()
+                println("CG Serialized")
 
                 output.write(json)
-
             } catch {
                 case e: Exception =>
                     println(s"Unexpected error: ${e.getClass.getName} - ${e.getMessage}")
@@ -85,7 +73,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
             } finally {
                 output.close()
             }
-        }
+        //}
 
 
         System.nanoTime() - startTime
@@ -228,65 +216,85 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
                         targets: List[NativeImageTarget]
                       ): ReachableMethods = {
         val methodMap = methods.map(m => m.id -> m).toMap
+
+        // Build invocation to targets mapping
+        val invocationTargets = targets.groupBy(_.invokeId).mapValues(_.map(_.targetId))
+
         val reachableMethods = methods.map { method =>
-            val methodCalls = invocations.filter(_.methodId == method.id)
-            val callSites = methodCalls.map { invocation =>
-                val targetMethod = methodMap(invocation.targetId)
-                CallSite(
-                    declaredTarget = Method(
-                        name = targetMethod.name,
-                        declaringClass = toJvmTypeDescriptor(targetMethod.declaringClass),
-                        returnType = toJvmTypeDescriptor(targetMethod.returnType),
-                        parameterTypes = targetMethod.parameterTypes.split(" ").map(toJvmTypeDescriptor).toList
-                    ),
-                    line = -1,
-                    pc = None,
-                    targets = Set(Method(
-                        name = targetMethod.name,
-                        declaringClass = toJvmTypeDescriptor(targetMethod.declaringClass),
-                        returnType = toJvmTypeDescriptor(targetMethod.returnType),
-                        parameterTypes = targetMethod.parameterTypes.split(" ").map(toJvmTypeDescriptor).toList
-                    ))
-                )
-            }.toSet
+            // Parse method signature
+            val methodSignature = Method(
+                name = method.name,
+                declaringClass = toJvmTypeDescriptor(method.declaringClass),
+                returnType = toJvmTypeDescriptor(method.returnType),
+                parameterTypes = parseParameterTypes(method.parameterTypes)
+            )
+
+            // Process all calls from this method
+            val callSites = invocations
+              .filter(_.methodId == method.id)
+              .flatMap { invocation =>
+                  val targetIds = invocationTargets.getOrElse(invocation.id, List(invocation.targetId))
+                  targetIds.map { targetId =>
+                      val targetMethod = methodMap(targetId)
+                      val targetSignature = Method(
+                          name = targetMethod.name,
+                          declaringClass = toJvmTypeDescriptor(targetMethod.declaringClass),
+                          returnType = toJvmTypeDescriptor(targetMethod.returnType),
+                          parameterTypes = parseParameterTypes(targetMethod.parameterTypes)
+                      )
+
+                      CallSite(
+                          declaredTarget = targetSignature,
+                          line = -1,
+                          pc = None,
+                          targets = Set(targetSignature)
+                      )
+                  }
+              }.toSet
 
             ReachableMethod(
-                method = Method(
-                    name = method.name,
-                    declaringClass = toJvmTypeDescriptor(method.declaringClass),
-                    returnType = toJvmTypeDescriptor(method.returnType),
-                    parameterTypes = method.parameterTypes.split(" ").map(toJvmTypeDescriptor).toList
-                ),
-                callSites = callSites
-            )
+                method = methodSignature,
+                callSites = callSites)
         }.toSet
 
         ReachableMethods(reachableMethods)
     }
 
+    def parseParameterTypes(paramTypes: String): List[String] = {
+        if (paramTypes.trim.isEmpty || paramTypes == "Lempty;") {
+            List.empty
+        } else {
+            paramTypes.split(" ")
+              .map(toJvmTypeDescriptor)
+              .filter(_.nonEmpty)
+              .toList
+        }
+    }
+
     def toJvmTypeDescriptor(className: String): String = {
+        if (className == "empty" || className == "Lempty;") {
+            return ""
+        }
+
         className match {
-            case "void" => "V"
-            case "int" => "I"
+            case "void"    => "V"
+            case "int"     => "I"
             case "boolean" => "Z"
-            case "byte" => "B"
-            case "char" => "C"
-            case "short" => "S"
-            case "long" => "J"
-            case "float" => "F"
-            case "double" => "D"
+            case "byte"    => "B"
+            case "char"    => "C"
+            case "short"   => "S"
+            case "long"    => "J"
+            case "float"   => "F"
+            case "double"  => "D"
             case s if s.endsWith("[]") =>
                 "[" + toJvmTypeDescriptor(s.substring(0, s.length - 2))
             case _ =>
-                if (className.contains(".")) {
+                if (className.startsWith("L") && className.endsWith(";")) {
+                    className
+                } else if (className.contains(".")) {
                     "L" + className.replace('.', '/') + ";"
                 } else {
-                    // Already in JVM format?
-                    if (className.startsWith("L") && className.endsWith(";")) {
-                        className
-                    } else {
-                        "L" + className + ";"
-                    }
+                    "L" + className + ";"
                 }
         }
     }
