@@ -128,6 +128,7 @@ lazy val jcg_native_image_testadapter = project.settings(
     commonSettings,
     name := "JCG Native Image Test Adapter",
     libraryDependencies += "com.typesafe.play" %% "play-json" % "2.9.2",
+    libraryDependencies += "org.apache.commons" % "commons-csv" % "1.10.0",
     assembly / aggregate := false,
     publishArtifact := false
 ).dependsOn(jcg_testadapter_commons)
