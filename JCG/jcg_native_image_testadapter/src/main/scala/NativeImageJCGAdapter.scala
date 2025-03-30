@@ -1,3 +1,5 @@
+import org.apache.commons.io.FileUtils
+
 import java.io.{File, PrintWriter, Writer}
 import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import scala.sys.process._
@@ -33,14 +35,14 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val jarFileName = jarPath.getFileName.toString
         val configOutputDir = configDirectory.resolve(jarFileName.stripSuffix(".jar"))
 
-        //if(jarFileName == "CFNE1.jar" || jarFileName == "CFNE2.jar") // just a few
+        //if(jarFileName == "CFNE1.jar" ) // just one
         //{
             try {
                 // Create configuration files that could be necessary for reflection etc
-                //createConfig(jarPath, configOutputDir, graalJavaPath)
+                createConfig(jarPath, configOutputDir, graalJavaPath)
 
                 // Generate call graph for current test case
-                //generateCallGraph(jarPath, configDirectory, nativeImagePath)
+                generateCallGraph(jarPath, configDirectory, nativeImagePath)
 
                 // Cleanup
                 //cleanArtifact(jarFileName)
@@ -116,6 +118,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val nativeImageCommand = Seq(
             nativeImagePath.toString,
             "-H:+UnlockExperimentalVMOptions",
+            "-H:+ReturnAfterAnalysis",
             "-H:PrintAnalysisCallTreeType=CSV",
             s"-H:ConfigurationFileDirectories=${configOutputDir.toString}",
             "-jar",
@@ -133,6 +136,10 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
 
         // Moving them to their own folder for each test case
         val callGraphDir = Paths.get("./CallGraphs").resolve(jarFile.getFileName.toString.stripSuffix(".jar"))
+        // Delete if exists (recursively)
+        if (Files.exists(callGraphDir)) {
+            FileUtils.deleteDirectory(callGraphDir.toFile)
+        }
         Files.createDirectories(callGraphDir)
         val reportsFolder = Paths.get("./reports")
         if (Files.exists(reportsFolder)) {
@@ -232,7 +239,6 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val invocationTargets = targets.groupBy(_.invokeId).mapValues(_.map(_.targetId))
 
         val reachableMethods = methods.map { method =>
-            // Parse method signature
             val methodSignature = Method(
                 name = method.name,
                 declaringClass = toJvmTypeDescriptor(method.declaringClass),
@@ -240,32 +246,30 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
                 parameterTypes = parseParameterTypes(method.parameterTypes)
             )
 
-            // Process all calls from this method
             val callSites = invocations
               .filter(_.methodId == method.id)
-              .flatMap { invocation =>
+              .map { invocation =>
+                  // Get ALL targets for this invocation
                   val targetIds = invocationTargets.getOrElse(invocation.id, List(invocation.targetId))
-                  targetIds.map { targetId =>
+                  val targetSignatures = targetIds.map { targetId =>
                       val targetMethod = methodMap(targetId)
-                      val targetSignature = Method(
+                      Method(
                           name = targetMethod.name,
                           declaringClass = toJvmTypeDescriptor(targetMethod.declaringClass),
                           returnType = toJvmTypeDescriptor(targetMethod.returnType),
                           parameterTypes = parseParameterTypes(targetMethod.parameterTypes)
                       )
+                  }.toSet
 
-                      CallSite(
-                          declaredTarget = targetSignature,
-                          line = -1,
-                          pc = None,
-                          targets = Set(targetSignature)
-                      )
-                  }
+                  CallSite(
+                      declaredTarget = targetSignatures.head, // is this right?
+                      line = -1,
+                      pc = None,
+                      targets = targetSignatures
+                  )
               }.toSet
 
-            ReachableMethod(
-                method = methodSignature,
-                callSites = callSites)
+            ReachableMethod(methodSignature, callSites)
         }.toSet
 
         ReachableMethods(reachableMethods)
