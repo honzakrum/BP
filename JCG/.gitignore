@@ -24,3 +24,7 @@ jre.conf
 local.sbt
 */build.properties
 /fingerprints
+/CallGraphs
+/input
+/testcasesOutput
+/config
