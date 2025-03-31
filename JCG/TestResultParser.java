@@ -266,21 +266,43 @@ public class TestResultParser {
     }
 
     private static void parseTestContent(String content, TestResult result) {
-        // Remove special comments first
+        // Remove all special comment markers
         content = content.replaceAll("(?m)^\\[//\\]:? # \\(.*?\\)\\n?", "");
 
-        String[] sections = content.split("```(?:java)?\\n");
-
-        if (sections.length > 0) {
-            result.description = sections[0].trim()
-                    .replaceAll("`([^`]+)`", "<code>$1</code>")
-                    .replaceAll("(?m)^[ \\t]*\\r?\\n", "\n")
-                    .replaceAll("\\n{3,}", "\n\n");
+        // Extract description
+        int codeStart = content.indexOf("```java");
+        if (codeStart < 0) { // No java code block
+            result.description = cleanDescription(content);
+            return;
         }
 
-        if (sections.length > 1) {
-                result.testCase = escapeHtml(sections[1]);
+        result.description = cleanDescription(content.substring(0, codeStart));
+
+        // Extract all java code blocks
+        StringBuilder codeBuilder = new StringBuilder();
+        Pattern codePattern = Pattern.compile("```java\\n([\\s\\S]+?)```");
+        Matcher codeMatcher = codePattern.matcher(content);
+
+        while (codeMatcher.find()) {
+            String codeBlock = codeMatcher.group(1).trim();
+            if (!codeBlock.isEmpty()) {
+                if (codeBuilder.length() > 0) {
+                    codeBuilder.append("\n\n");
+                }
+                codeBuilder.append(codeBlock);
+            }
         }
+
+        if (codeBuilder.length() > 0) {
+            result.testCase = escapeHtml(codeBuilder.toString());
+        }
+    }
+
+    private static String cleanDescription(String text) {
+        return text.trim()
+                .replaceAll("`([^`]+)`", "<code>$1</code>") // Format inline code
+                .replaceAll("(?m)^[ \\t]*\\r?\\n", "\n")    // Remove empty lines
+                .replaceAll("\\n{3,}", "\n\n");             // Normalize newlines
     }
 
     private static List<TestResult> parseResultsFile(String filePath) throws IOException {
