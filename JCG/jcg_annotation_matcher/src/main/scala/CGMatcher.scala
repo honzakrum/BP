@@ -15,7 +15,7 @@ import play.api.libs.json.Json
  *
  * @author Florian Kuebler
  */
-object CGMatcher {
+object  CGMatcher {
 
     /**
      * Computes whether computed call graph (represented as a json file of [[ReachableMethods]])
@@ -113,7 +113,7 @@ object CGMatcher {
             val name = AnnotationHelper.getName(annotation)
 
             computedCallSites.find { cs ⇒
-                cs.line == line && cs.declaredTarget.name == name
+                /*cs.line == line &&*/ cs.declaredTarget.name == name
             } match {
                 case Some(computedCallSite) ⇒
 
@@ -144,6 +144,8 @@ object CGMatcher {
                     }
                 case _ ⇒
                     // there is no matching call site in the computed call graph
+                    if (verbose)
+                        println(s"$line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is no matching call site in the computed call graph")
                     return Unsound;
             }
         }
