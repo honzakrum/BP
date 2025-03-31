@@ -26,7 +26,7 @@ echo "JCG tests compiled, compile output in file ${TEST_COMPILE}."
 echo "Running analysis with NativeImageJCGAdapter..."
 touch $EVALUATION
 sbt -J-Xmx12G "; project jcg_evaluation; runMain FingerprintExtractor -i $JCG_PATH/$INPUT_DIR/java
- -o $JCG_PATH/$OUTPUT_DIR -l java --adapter $TOOL --algorithm-prefix $ALGORITHM" &> $EVALUATION
+ -o $JCG_PATH/$OUTPUT_DIR -l java -d --adapter $TOOL --algorithm-prefix $ALGORITHM" #&> $EVALUATION
 echo "NativeImageJCGAdapter analysis completed, debug output in file ${EVALUATION}."
 
 # timings
