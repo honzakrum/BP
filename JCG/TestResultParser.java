@@ -2,6 +2,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.*;
+import java.util.regex.*;
 
 public class TestResultParser {
     private static final String HTML_HEAD = """
@@ -202,20 +203,84 @@ public class TestResultParser {
     }
 
     public static void main(String[] args) throws IOException {
-        if (args.length < 2) {
-            System.out.println("Usage: java TestResultParser <results_file> <log_file> [output.html]");
+        if (args.length < 3) {
+            System.out.println("Usage: java TestResultParser <results_file> <log_file> <markdown_dir> [output.html]");
+            System.out.println("Default output file: test_results.html");
             return;
         }
 
         String resultsFile = args[0];
         String logFile = args[1];
-        String outputFile = args.length > 2 ? args[2] : "test_results.html";
+        String markdownDir = args[2];
+        String outputFile = args.length > 3 ? args[3] : "test_results.html";
+
+        // Verify files and folder exist
+        if (!Files.exists(Paths.get(resultsFile))) {
+            System.err.println("Error: Results file not found: " + resultsFile);
+            return;
+        }
+        if (!Files.exists(Paths.get(logFile))) {
+            System.err.println("Error: Log file not found: " + logFile);
+            return;
+        }
+        if (!Files.isDirectory(Paths.get(markdownDir))) {
+            System.err.println("Error: Markdown directory not found: " + markdownDir);
+            return;
+        }
 
         List<TestResult> results = parseResultsFile(resultsFile);
         parseLogFile(logFile, results);
+        parseMarkdownFiles(markdownDir, results);  // Add this method
         generateHtmlReport(results, outputFile);
 
         System.out.println("HTML report generated: " + outputFile);
+    }
+
+    private static void parseMarkdownFiles(String dirPath, List<TestResult> results) throws IOException {
+        Map<String, TestResult> resultMap = results.stream()
+                .collect(Collectors.toMap(r -> r.name, r -> r));
+
+        Files.list(Paths.get(dirPath))
+                .filter(path -> path.toString().endsWith(".md"))
+                .forEach(mdFile -> parseMarkdownFile(mdFile, resultMap));
+    }
+
+    private static void parseMarkdownFile(Path mdFile, Map<String, TestResult> resultMap) {
+        try {
+            String content = Files.readString(mdFile);
+            Pattern testPattern = Pattern.compile("^## (\\w+)$([\\s\\S]+?)(?=^## \\w+|\\z)", Pattern.MULTILINE);
+            Matcher matcher = testPattern.matcher(content);
+
+            while (matcher.find()) {
+                String testName = matcher.group(1).trim();
+                String testContent = matcher.group(2).trim();
+
+                if (resultMap.containsKey(testName)) {
+                    TestResult result = resultMap.get(testName);
+                    parseTestContent(testContent, result);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading markdown file: " + mdFile + " - " + e.getMessage());
+        }
+    }
+
+    private static void parseTestContent(String content, TestResult result) {
+        // Remove special comments first
+        content = content.replaceAll("(?m)^\\[//\\]:? # \\(.*?\\)\\n?", "");
+
+        String[] sections = content.split("```(?:java)?\\n");
+
+        if (sections.length > 0) {
+            result.description = sections[0].trim()
+                    .replaceAll("`([^`]+)`", "<code>$1</code>")
+                    .replaceAll("(?m)^[ \\t]*\\r?\\n", "\n")
+                    .replaceAll("\\n{3,}", "\n\n");
+        }
+
+        if (sections.length > 1) {
+                result.testCase = escapeHtml(sections[1]);
+        }
     }
 
     private static List<TestResult> parseResultsFile(String filePath) throws IOException {
@@ -258,7 +323,9 @@ public class TestResultParser {
         return input.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
-                .replace("\n", "<br>");
+                .replace("\n", "<br>")
+                .replace("\t", "    ")
+                .replace(" ", "&nbsp;");
     }
 
     private static void generateHtmlReport(List<TestResult> results, String outputFile) throws IOException {
