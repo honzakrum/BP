@@ -14,6 +14,7 @@ src/lib/out
 *.out
 *.pdf
 *.gz
+*.html
 *~
 out/
 doc/src/document.log
