@@ -35,4 +35,4 @@ echo "NativeImageJCGAdapter analysis completed, debug output in file $JCG_PATH/$
 
 # format test results
 javac TestResultParser.java
-java TestResultParser $JCG_PATH/$OUTPUT_DIR/NativeImage-PTA_profile.txt $JCG_PATH/$OUTPUT_DIR/$EVALUATION $JCG_PATH/$RESOURCE_DIR/java
+java TestResultParser $JCG_PATH/$OUTPUT_DIR/$EVALUATION $JCG_PATH/$OUTPUT_DIR/$EVALUATION $JCG_PATH/$RESOURCE_DIR/java
