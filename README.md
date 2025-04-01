@@ -13,6 +13,7 @@
 - Java 8+ JDK installed
 - GraalVM installed (for native image compilation)
 - SDKMAN! recommended for Java version management
+- sbt version 1.10.7
 
 ### Configuration
 
