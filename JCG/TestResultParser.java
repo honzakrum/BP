@@ -230,7 +230,7 @@ public class TestResultParser {
 
         List<TestResult> results = parseResultsFile(resultsFile);
         parseLogFile(logFile, results);
-        parseMarkdownFiles(markdownDir, results);  // Add this method
+        parseMarkdownFiles(markdownDir, results);
         generateHtmlReport(results, outputFile);
 
         System.out.println("HTML report generated: " + outputFile);
