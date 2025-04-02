@@ -625,7 +625,7 @@ import lib.annotations.callgraph.DirectCall;
 
 public class Demo {
 
-    public static void verifyCall(){ /* do something */ }
+    public static void verifyCall(){ System.out.println("verifyCall() executed");  }
 
     @DirectCall(name="verifyCall", line = 15, resolvedTargets = "Lcfne/Demo;")
 	public static void main(String[] args){
@@ -643,11 +643,15 @@ public class Demo {
 }
 
 class DeceptiveClass {
-
+    static {
+        System.out.println("DeceptiveClass loaded");
+    }
 }
 
 class LoadedClass {
-
+    static {
+        System.out.println("LoadedClass loaded");
+    }
 }
 ```
 [//]: # (END)
@@ -665,7 +669,7 @@ import lib.annotations.callgraph.DirectCall;
 
 public class Demo {
 
-    public static void verifyCall(){ /* do something */ }
+    public static void verifyCall(){ System.out.println("verifyCall() executed"); }
 
     @DirectCall(name="verifyCall", line = 18, resolvedTargets = "Lcfne/Demo;")
 	public static void main(String[] args){
@@ -701,7 +705,7 @@ import lib.annotations.callgraph.DirectCall;
 
 public class Demo {
 
-    public static void verifyCall(){ /* do something */ }
+    public static void verifyCall(){ System.out.println("verifyCall() executed"); }
 
 	public static void main(String[] args){
 	    try {
@@ -744,7 +748,7 @@ import lib.annotations.callgraph.DirectCall;
 
 public class Demo {
 
-    public static void verifyCall(){ /* do something */ }
+    public static void verifyCall(){ System.out.println("verifyCall() executed"); }
 
 	public static void main(String[] args){
 	    try {
@@ -761,7 +765,9 @@ public class Demo {
 }
 
 class LoadedClass extends RootClass {
-
+    static {
+        System.out.println("LoadedClass loaded");
+    }
 }
 
 class RootClass {
