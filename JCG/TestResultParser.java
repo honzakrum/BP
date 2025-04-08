@@ -193,6 +193,8 @@ public class TestResultParser {
         String testCase;
         String log;
         Path jsonPath;
+        String matcherOutput;
+        String niBuild;
 
         public TestResult(String name, String status) {
             this.name = name;
@@ -201,6 +203,8 @@ public class TestResultParser {
             this.testCase = "No test case details available";
             this.log = "";
             this.jsonPath = null;
+            this.matcherOutput = "";
+            this.niBuild = "";
         }
     }
 
@@ -324,31 +328,53 @@ public class TestResultParser {
 
     private static void parseLogFile(String filePath, List<TestResult> results) throws IOException {
         Map<String, StringBuilder> logMap = new HashMap<>();
+        Map<String, StringBuilder> matcherMap = new HashMap<>();
         String currentTest = null;
         StringBuilder currentLog = new StringBuilder();
+        StringBuilder currentMatcher = new StringBuilder();
+        boolean inMatcherBlock = false;
 
         for (String line : Files.readAllLines(Paths.get(filePath))) {
             if (line.contains("performing test case:")) {
                 if (currentTest != null) {
-                    logMap.put(currentTest, currentLog);
-                    currentLog = new StringBuilder();
+                    logMap.put(currentTest, new StringBuilder(currentLog));
+                    matcherMap.put(currentTest, new StringBuilder(currentMatcher));
                 }
                 currentTest = line.substring(line.indexOf(":") + 1).trim();
+                currentLog = new StringBuilder();
+                currentMatcher = new StringBuilder();
+                inMatcherBlock = false;
             } else if (currentTest != null) {
                 currentLog.append(line).append("\n");
+
+                if (line.contains("[info][CG matcher]")) {
+                    inMatcherBlock = true;
+                }
+
+                if (inMatcherBlock) {
+                    currentMatcher.append(line).append("\n");
+                    if (line.trim().isEmpty()) { // end of matcher block
+                        inMatcherBlock = false;
+                    }
+                }
             }
         }
 
         if (currentTest != null) {
             logMap.put(currentTest, currentLog);
+            matcherMap.put(currentTest, currentMatcher);
         }
 
         for (TestResult result : results) {
             if (logMap.containsKey(result.name)) {
                 result.log = escapeHtml(logMap.get(result.name).toString());
             }
+            if (matcherMap.containsKey(result.name)) {
+                result.matcherOutput = escapeHtml(matcherMap.get(result.name).toString());
+            }
         }
     }
+
 
     private static String escapeHtml(String input) {
         return input.replace("&", "&amp;")
@@ -443,6 +469,15 @@ public class TestResultParser {
         writer.printf("<div id='%s-case-content' class='detail-content'>%s</div>\n",
                 result.name, result.testCase);
         writer.println("</div>");
+
+        // Matcher Output section
+        if (!result.matcherOutput.isEmpty()) {
+            writer.printf("<div class='detail-section'>\n");
+            writer.printf("<div id='%s-matcher-toggle' class='detail-toggle'>Matcher Output</div>\n", result.name);
+            writer.printf("<div id='%s-matcher-content' class='detail-content'>%s</div>\n",
+                    result.name, result.matcherOutput);
+            writer.println("</div>");
+        }
 
         // Log section
         writer.printf("<div class='detail-section'>\n");
