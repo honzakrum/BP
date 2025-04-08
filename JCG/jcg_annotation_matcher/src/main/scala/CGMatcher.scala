@@ -124,10 +124,10 @@ object  CGMatcher {
                     for (annotatedTgt ← resolvedTargets) {
                         if (!computedTargets.contains(annotatedTgt)) {
                             if (verbose)
-                                println(s"$line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is no call to $annotatedTgt#$name")
+                                println(s"[info][CG matcher] $line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is no call to $annotatedTgt#$name")
                             return Unsound;
                         } else {
-                            if (verbose) println("found it")
+                            if (verbose) println("[info][CG matcher] found it")
                         }
                     }
 
@@ -136,16 +136,16 @@ object  CGMatcher {
                     for (prohibitedTgt ← prohibitedTargets) {
                         if (computedTargets.contains(prohibitedTgt)) {
                             if (verbose)
-                                println(s"$line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is a call to prohibited target $prohibitedTgt#$name")
+                                println(s"[info][CG matcher] $line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is a call to prohibited target $prohibitedTgt#$name")
                             finalAssessment = finalAssessment.combine(Imprecise)
                         } else {
-                            if (verbose) println("no call to prohibited")
+                            if (verbose) println("[info][CG matcher] no call to prohibited")
                         }
                     }
                 case _ ⇒
                     // there is no matching call site in the computed call graph
                     if (verbose)
-                        println(s"$line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is no matching call site in the computed call graph")
+                        println(s"[info][CG matcher] Trying to find in generated CG $line:${annotatedMethod.declaringClass}#${annotatedMethod.name}:\t there is no matching call site in the computed call graph")
                     return Unsound;
             }
         }

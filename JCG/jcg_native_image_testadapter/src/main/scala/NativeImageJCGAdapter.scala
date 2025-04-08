@@ -35,32 +35,28 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val jarFileName = jarPath.getFileName.toString
         val configOutputDir = configDirectory.resolve(jarFileName.stripSuffix(".jar"))
 
-        //if(jarFileName == "CFNE1.jar" ) // just one
-        //{
-            try {
-                // Create configuration files that could be necessary for reflection etc
-                createConfig(jarPath, configOutputDir, graalJavaPath)
+        try {
+            // Create configuration files that could be necessary for reflection etc
+            createConfig(jarPath, configOutputDir, graalJavaPath)
 
-                // Generate CSV call graph for current test case
-                generateCallGraph(jarPath, configDirectory, nativeImagePath)
+            // Generate CSV call graph for current test case
+            generateCallGraph(jarPath, configDirectory, nativeImagePath)
 
-                // Cleanup
-                //cleanArtifact(jarFileName)
+            // Cleanup
+            //cleanArtifact(jarFileName)
 
-                // Serialization
-                val json = serializeCallGraph(jarFileName)
-                println("[INFO] CG Serialized")
+            // Serialization
+            val json = serializeCallGraph(jarFileName)
+            println("[info] CG Serialized")
 
-                output.write(json)
-            } catch {
-                case e: Exception =>
-                    println(s"[ERROR] Unexpected error: ${e.getClass.getName} - ${e.getMessage}")
-                    e.printStackTrace()
-            } finally {
-                output.close()
-            }
-        //}
-
+            output.write(json)
+        } catch {
+            case e: Exception =>
+                println(s"[error] Unexpected error: ${e.getClass.getName} - ${e.getMessage}")
+                e.printStackTrace()
+        } finally {
+            output.close()
+        }
 
         System.nanoTime() - startTime
     }
@@ -73,7 +69,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
      * @param graalJavaPath The path to Native Image executable.
      */
     def createConfig(jarFile: Path, configOutputDir: Path, graalJavaPath: Path): Unit = {
-        println(s"[INFO] Creating directory ${configOutputDir.toString}")
+        println(s"[info] Creating directory ${configOutputDir.toString}")
         Files.createDirectories(configOutputDir)
         val agentCommand = Seq(
             graalJavaPath.toString,
@@ -82,11 +78,11 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
             jarFile.toString
         )
 
-        println(s"[INFO] Running agent command: ${agentCommand.mkString(" ")}")
+        println(s"[info] Running agent command: ${agentCommand.mkString(" ")}")
         val agentResult = Try(agentCommand.!!)
         agentResult match {
-            case Success(_) => println(s"[INFO] Configuration generated for ${jarFile.getFileName}")
-            case Failure(e) => println(s"[ERROR] Failed to generate configuration for ${jarFile.getFileName}: ${e.getMessage}")
+            case Success(_) => println(s"[info] Configuration generated for ${jarFile.getFileName}")
+            case Failure(e) => println(s"[error] Failed to generate configuration for ${jarFile.getFileName}: ${e.getMessage}")
         }
     }
 
@@ -110,12 +106,12 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         )
 
         // Generating call graphs
-        println(s"[INFO] Running native-image command: ${nativeImageCommand.mkString(" ")}")
+        println(s"[info] Running native-image command: ${nativeImageCommand.mkString(" ")}")
         val nativeImageResult = Try(nativeImageCommand.!!)
         nativeImageResult match {
             case Success(output) =>
-                println(s"[INFO] Call graph generated for ${jarFile.getFileName}:\n$output")
-            case Failure(e) => println(s"[ERROR] Failed to generate call graph for ${jarFile.getFileName}: ${e.getMessage}")
+                println(s"[info] Call graph generated for ${jarFile.getFileName}:\n$output")
+            case Failure(e) => println(s"[error] Failed to generate call graph for ${jarFile.getFileName}: ${e.getMessage}")
         }
 
         // Moving them to their own folder for each test case, deletes previous in case of a rerun
@@ -127,9 +123,9 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val reportsFolder = Paths.get("./reports")
         if (Files.exists(reportsFolder)) {
             Files.move(reportsFolder, callGraphDir, StandardCopyOption.REPLACE_EXISTING)
-            println(s"[INFO] Moved folder from $reportsFolder to $callGraphDir")
+            println(s"[info] Moved folder from $reportsFolder to $callGraphDir")
         } else {
-            println(s"[ERROR] Source folder $reportsFolder does not exist.")
+            println(s"[error] Source folder $reportsFolder does not exist.")
         }
     }
 
@@ -142,7 +138,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val executableName = jarFileName.stripSuffix(".jar") // Name of the executable
         val executablePath = Paths.get(executableName) // Path to the executable
         if (Files.exists(executablePath)) {
-            println(s"[INFO] Deleting executable artifact: $executableName")
+            println(s"[info] Deleting executable artifact: $executableName")
             Files.delete(executablePath) // Delete the executable
         }
     }
@@ -322,7 +318,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
     def serializeCallGraph(jarFileName: String): String = {
         // Read CSV files
         val testFolderName = "./CallGraphs/" + jarFileName.stripSuffix(".jar")
-        println(s"[INFO] Test folder name: $testFolderName")
+        println(s"[info] Test folder name: $testFolderName")
         val methodsCsv = readCsv(s"$testFolderName/call_tree_methods.csv")
         val invocationsCsv = readCsv(s"$testFolderName/call_tree_invokes.csv")
         val targetsCsv = readCsv(s"$testFolderName/call_tree_targets.csv")
