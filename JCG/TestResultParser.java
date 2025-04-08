@@ -192,6 +192,7 @@ public class TestResultParser {
         String description;
         String testCase;
         String log;
+        Path jsonPath;
 
         public TestResult(String name, String status) {
             this.name = name;
@@ -199,6 +200,7 @@ public class TestResultParser {
             this.description = "No description available";
             this.testCase = "No test case details available";
             this.log = "";
+            this.jsonPath = null;
         }
     }
 
@@ -210,6 +212,9 @@ public class TestResultParser {
         }
 
         String resultsFile = args[0];
+        Path resultsFilePath = Paths.get(resultsFile);
+        String resultsDir = resultsFilePath.getParent() != null ?
+                resultsFilePath.getParent().toString() : ".";
         String logFile = args[1];
         String markdownDir = args[2];
         String outputFile = args.length > 3 ? args[3] : "test_results.html";
@@ -228,7 +233,7 @@ public class TestResultParser {
             return;
         }
 
-        List<TestResult> results = parseResultsFile(resultsFile);
+        List<TestResult> results = parseResultsFile(resultsFile, resultsDir);
         parseLogFile(logFile, results);
         parseMarkdownFiles(markdownDir, results);
         generateHtmlReport(results, outputFile);
@@ -305,11 +310,15 @@ public class TestResultParser {
                 .replaceAll("\\n{3,}", "\n\n");             // Normalize newlines
     }
 
-    private static List<TestResult> parseResultsFile(String filePath) throws IOException {
+    private static List<TestResult> parseResultsFile(String filePath, String resultDir) throws IOException {
         return Files.lines(Paths.get(filePath))
                 .map(line -> line.split("\\s+"))
                 .filter(parts -> parts.length >= 2)
-                .map(parts -> new TestResult(parts[0], parts[1]))
+                .map(parts -> {
+                    TestResult result = new TestResult(parts[0], parts[1]);
+                    result.jsonPath = Paths.get(resultDir, parts[0], "NativeImage", "PTA", "cg.json");
+                    return result;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -411,6 +420,10 @@ public class TestResultParser {
         }
     }
 
+    private static boolean jsonFileExists(TestResult result) {
+        return result.jsonPath != null && Files.exists(result.jsonPath);
+    }
+
     private static void writeTestItem(PrintWriter writer, TestResult result) {
         writer.printf("<div class='test-item'>%s</div>\n", result.name);
 
@@ -437,6 +450,16 @@ public class TestResultParser {
         writer.printf("<div id='%s-log-content' class='detail-content'>%s</div>\n",
                 result.name, result.log);
         writer.println("</div>");
+
+        // Call Graph
+        if (result.jsonPath != null && Files.exists(result.jsonPath)) {
+            writer.printf("<div class='detail-section'>\n");
+            writer.printf("<a href='%s' target='_blank' style='color: #2980b9; text-decoration: none;'>",
+                    result.jsonPath.toString().replace("\\", "/"));
+            writer.printf("<div class='detail-toggle'>View generated CG from NI</div>");
+            writer.printf("</a>");
+            writer.println("</div>");
+        }
 
         writer.println("</div>");
     }
