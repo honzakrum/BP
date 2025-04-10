@@ -212,7 +212,7 @@ object  CGMatcher {
 
             for (tgt ← computedCallSites.flatMap(_.targets)) {
                 if (tgt == annotatedTarget) {
-                    if (verbose) println(s"Found transitive call $source -> $annotatedTarget")
+                    if (verbose) println(s"[info][CG matcher] Found transitive call $source -> $annotatedTarget")
                     return true;
                 }
 
@@ -223,7 +223,7 @@ object  CGMatcher {
             }
         }
 
-        if (verbose) println(s"Missed transitive call $source -> $annotatedTarget")
+        if (verbose) println(s"[info][CG matcher] Missed transitive call $source -> $annotatedTarget")
 
         false
     }

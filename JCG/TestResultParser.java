@@ -194,7 +194,6 @@ public class TestResultParser {
         String log;
         Path jsonPath;
         String matcherOutput;
-        String niBuild;
 
         public TestResult(String name, String status) {
             this.name = name;
@@ -204,7 +203,6 @@ public class TestResultParser {
             this.log = "";
             this.jsonPath = null;
             this.matcherOutput = "";
-            this.niBuild = "";
         }
     }
 
