@@ -193,6 +193,10 @@ public class TestResultParser {
         String testCase;
         String log;
         Path jsonPath;
+        Path csvMethods;
+        Path csvInvokes;
+        Path csvTargets;
+        Path configFile;
         String matcherOutput;
 
         public TestResult(String name, String status) {
@@ -203,6 +207,10 @@ public class TestResultParser {
             this.log = "";
             this.jsonPath = null;
             this.matcherOutput = "";
+            this.csvMethods = null;
+            this.csvInvokes = null;
+            this.csvTargets = null;
+            this.configFile = null;
         }
     }
 
@@ -313,12 +321,18 @@ public class TestResultParser {
     }
 
     private static List<TestResult> parseResultsFile(String filePath, String resultDir) throws IOException {
+        string callGraphDir = "./CallGraphs";
+        string configDir = "./Config";
         return Files.lines(Paths.get(filePath))
                 .map(line -> line.split("\\s+"))
                 .filter(parts -> parts.length >= 2)
                 .map(parts -> {
                     TestResult result = new TestResult(parts[0], parts[1]);
                     result.jsonPath = Paths.get(resultDir, parts[0], "NativeImage", "PTA", "cg.json");
+                    result.csvMethods = Paths.get(callGraphDir, parts[0], "call_tree_methods.csv");
+                    result.csvInvokes = Paths.get(callGraphDir, parts[0], "call_tree_invokes.csv");
+                    result.csvTargets = Paths.get(callGraphDir, parts[0], "call_tree_targets.csv");
+                    result.configFile = Paths.get(configDir, parts[0], "reachability-metadata.json");
                     return result;
                 })
                 .collect(Collectors.toList());
@@ -444,8 +458,8 @@ public class TestResultParser {
         }
     }
 
-    private static boolean jsonFileExists(TestResult result) {
-        return result.jsonPath != null && Files.exists(result.jsonPath);
+    private static boolean validateFilePath(Path p) {
+        return p != null && Files.exists(p);
     }
 
     private static void writeTestItem(PrintWriter writer, TestResult result) {
@@ -485,14 +499,21 @@ public class TestResultParser {
         writer.println("</div>");
 
         // Call Graph
-        if (result.jsonPath != null && Files.exists(result.jsonPath)) {
+        if (validateFilePath(result.jsonPath)) {
             writer.printf("<div class='detail-section'>\n");
             writer.printf("<a href='%s' target='_blank' style='color: #2980b9; text-decoration: none;'>",
                     result.jsonPath.toString().replace("\\", "/"));
-            writer.printf("<div class='detail-toggle'>View generated CG from NI</div>");
+            writer.printf("<div class='detail-toggle'>View serialized Call graph from Native Image</div>");
             writer.printf("</a>");
             writer.println("</div>");
         }
+
+        // Additional files
+        if (validateFilePath(result.configFile));
+        if (validateFilePath(result.csvMethods));
+        if (validateFilePath(result.csvInvokes));
+        if (validateFilePath(result.csvTargets));
+
 
         writer.println("</div>");
     }
