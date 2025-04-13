@@ -321,8 +321,8 @@ public class TestResultParser {
     }
 
     private static List<TestResult> parseResultsFile(String filePath, String resultDir) throws IOException {
-        string callGraphDir = "./CallGraphs";
-        string configDir = "./Config";
+        String callGraphDir = "./CallGraphs";
+        String configDir = "./config";
         return Files.lines(Paths.get(filePath))
                 .map(line -> line.split("\\s+"))
                 .filter(parts -> parts.length >= 2)
@@ -468,53 +468,119 @@ public class TestResultParser {
         writer.printf("<div id='%s-details' class='test-details'>\n", result.name);
         writer.printf("<h4>%s</h4>\n", result.name);
 
-        // Description section
-        writer.printf("<div class='detail-section'>\n");
-        writer.printf("<div id='%s-desc-toggle' class='detail-toggle'>Description</div>\n", result.name);
-        writer.printf("<div id='%s-desc-content' class='detail-content'>%s</div>\n",
-                result.name, result.description);
-        writer.println("</div>");
+        // Description
+        writeDetailSection(writer, result.name, "Description", result.description);
 
-        // Test case section
-        writer.printf("<div class='detail-section'>\n");
-        writer.printf("<div id='%s-case-toggle' class='detail-toggle'>Test Case</div>\n", result.name);
-        writer.printf("<div id='%s-case-content' class='detail-content'>%s</div>\n",
-                result.name, result.testCase);
-        writer.println("</div>");
+        // Test case
+        writeDetailSection(writer, result.name, "Test Case", result.testCase);
 
-        // Matcher Output section
+        // Matcher Output
         if (!result.matcherOutput.isEmpty()) {
-            writer.printf("<div class='detail-section'>\n");
-            writer.printf("<div id='%s-matcher-toggle' class='detail-toggle'>Matcher Output</div>\n", result.name);
-            writer.printf("<div id='%s-matcher-content' class='detail-content'>%s</div>\n",
-                    result.name, result.matcherOutput);
-            writer.println("</div>");
+            writeDetailSection(writer, result.name, "Matcher Output", result.matcherOutput);
         }
 
-        // Log section
-        writer.printf("<div class='detail-section'>\n");
-        writer.printf("<div id='%s-log-toggle' class='detail-toggle'>Debug Log</div>\n", result.name);
-        writer.printf("<div id='%s-log-content' class='detail-content'>%s</div>\n",
-                result.name, result.log);
-        writer.println("</div>");
+        // Log
+        writeDetailSection(writer, result.name, "Debug Log", result.log);
 
         // Call Graph
         if (validateFilePath(result.jsonPath)) {
-            writer.printf("<div class='detail-section'>\n");
-            writer.printf("<a href='%s' target='_blank' style='color: #2980b9; text-decoration: none;'>",
-                    result.jsonPath.toString().replace("\\", "/"));
-            writer.printf("<div class='detail-toggle'>View serialized Call graph from Native Image</div>");
-            writer.printf("</a>");
-            writer.println("</div>");
+            writeFileLinkSection(writer, result, result.jsonPath);
         }
 
         // Additional files
-        if (validateFilePath(result.configFile));
-        if (validateFilePath(result.csvMethods));
-        if (validateFilePath(result.csvInvokes));
-        if (validateFilePath(result.csvTargets));
+        writeAdditionalFilesSection(writer, result);
 
+        writer.println("</div>");
+    }
 
+    private static void writeDetailSection(PrintWriter writer, String testName, String sectionName, String content) {
+        writer.printf("<div class='detail-section'>\n");
+        writer.printf("<div id='%s-%s-toggle' class='detail-toggle'>%s</div>\n",
+                testName, sectionName.toLowerCase().replace(" ", "-"), sectionName);
+        writer.printf("<div id='%s-%s-content' class='detail-content'>%s</div>\n",
+                testName, sectionName.toLowerCase().replace(" ", "-"), content);
+        writer.println("</div>");
+    }
+
+    private static void writeFileLinkSection(PrintWriter writer, TestResult result, Path filePath) {
+        writer.printf("<div class='detail-section'>\n");
+        writer.printf("<div id='%s-callgraph-toggle' class='detail-toggle'>Call Graph</div>\n", result.name);
+        writer.printf("<div id='%s-callgraph-content' class='detail-content'>\n", result.name);
+
+        writer.println("<div class='file-group'>");
+        writer.println("<p>Call graph from Native Image serialized into json:</p>");
+        if (validateFilePath(filePath)) {
+            writer.printf("<a href='%s' target='_blank'>%s</a>\n",
+                    result.jsonPath.toString().replace("\\", "/"),
+                    result.jsonPath.getFileName());
+        } else {
+            writer.println("Call graph file was not generated for this test case.");
+        }
+        writer.println("</div>");
+
+        writer.println("</div>");
+        writer.println("</div>");
+    }
+
+    private static void writeAdditionalFilesSection(PrintWriter writer, TestResult result) {
+        boolean hasCsvFiles = validateFilePath(result.csvMethods) ||
+                validateFilePath(result.csvInvokes) ||
+                validateFilePath(result.csvTargets);
+
+        writer.printf("<div class='detail-section'>\n");
+        writer.printf("<div id='%s-files-toggle' class='detail-toggle'>Additional Files</div>\n", result.name);
+        writer.printf("<div id='%s-files-content' class='detail-content'>\n", result.name);
+
+        // Config file section
+        writer.println("<div class='file-group'>");
+        writer.println("<p>Config generated by GraalVM for compilation of test case to native image:</p>");
+        if (validateFilePath(result.configFile)) {
+            writer.printf("<a href='%s' target='_blank'>%s</a>\n",
+                    result.configFile.toString().replace("\\", "/"),
+                    result.configFile.getFileName());
+        } else {
+            writer.println("Configuration file for this test case was not found.");
+        }
+        writer.println("</div>");
+
+        // CSV files section
+        writer.println("<div class='file-group'>");
+        writer.println("<p>Call graph analysis files (CSV format):</p>");
+
+        if (!hasCsvFiles) {
+            writer.println("No call graph analysis files were generated for this test case.");
+        } else {
+            writer.println("<ul>");
+
+            if (validateFilePath(result.csvMethods)) {
+                writer.printf("<li><a href='%s' target='_blank'>%s</a> - Methods included in the call graph</li>\n",
+                        result.csvMethods.toString().replace("\\", "/"),
+                        result.csvMethods.getFileName());
+            } else {
+                writer.println("<li>Methods CSV file was not generated</li>");
+            }
+
+            if (validateFilePath(result.csvInvokes)) {
+                writer.printf("<li><a href='%s' target='_blank'>%s</a> - Method invocation relationships</li>\n",
+                        result.csvInvokes.toString().replace("\\", "/"),
+                        result.csvInvokes.getFileName());
+            } else {
+                writer.println("<li>Invocation relationships CSV file was not generated</li>");
+            }
+
+            if (validateFilePath(result.csvTargets)) {
+                writer.printf("<li><a href='%s' target='_blank'>%s</a> - Target methods</li>\n",
+                        result.csvTargets.toString().replace("\\", "/"),
+                        result.csvTargets.getFileName());
+            } else {
+                writer.println("<li>Target methods CSV file was not generated</li>");
+            }
+
+            writer.println("</ul>");
+        }
+        writer.println("</div>");
+
+        writer.println("</div>");
         writer.println("</div>");
     }
 }
