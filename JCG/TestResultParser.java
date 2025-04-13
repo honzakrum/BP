@@ -60,7 +60,7 @@ public class TestResultParser {
                 }
                 .passed { background-color: #2ecc71; color: white; }
                 .failed { background-color: #e74c3c; color: white; }
-                .inconclusive { background-color: #f39c12; color: white; }
+                .imprecise { background-color: #f39c12; color: white; }
                 .test-list { 
                     display: none; 
                     margin: 15px 0 30px 0;
@@ -154,7 +154,7 @@ public class TestResultParser {
                                 .forEach(list => list.style.display = 'none');                        
                             // Show selected test list
                             const category = this.classList.contains('passed') ? 'passed' : 
-                                            this.classList.contains('failed') ? 'failed' : 'inconclusive';
+                                            this.classList.contains('failed') ? 'failed' : 'imprecise';
                             document.getElementById(category + '-tests').style.display = 'block';
                         });
                     });
@@ -386,7 +386,7 @@ public class TestResultParser {
     private static void generateHtmlReport(List<TestResult> results, String outputFile) throws IOException {
         long passedCount = results.stream().filter(r -> "S".equals(r.status)).count();
         long failedCount = results.stream().filter(r -> "U".equals(r.status)).count();
-        long inconclusiveCount = results.stream().filter(r -> "I".equals(r.status)).count();
+        long impreciseCount = results.stream().filter(r -> "I".equals(r.status)).count();
         long totalCount = results.size();
         double passPercentage = (passedCount * 100.0) / totalCount;
 
@@ -411,8 +411,8 @@ public class TestResultParser {
             writer.printf("<div class='count'>%d</div><div class='status'>FAILED</div>", failedCount);
             writer.println("</div>");
 
-            writer.printf("<div class='summary-card inconclusive'>");
-            writer.printf("<div class='count'>%d</div><div class='status'>INCONCLUSIVE</div>", inconclusiveCount);
+            writer.printf("<div class='summary-card imprecise'>");
+            writer.printf("<div class='count'>%d</div><div class='status'>IMPRECISE</div>", impreciseCount);
             writer.println("</div>");
             writer.println("</div>");
 
@@ -431,8 +431,8 @@ public class TestResultParser {
                     .forEach(r -> writeTestItem(writer, r));
             writer.println("</div>");
 
-            writer.println("<div id='inconclusive-tests' class='test-list'>");
-            writer.println("<h3>Inconclusive Tests</h3>");
+            writer.println("<div id='imprecise-tests' class='test-list'>");
+            writer.println("<h3>Imprecise Tests</h3>");
             results.stream()
                     .filter(r -> "I".equals(r.status))
                     .forEach(r -> writeTestItem(writer, r));
