@@ -115,6 +115,13 @@ public class TestResultParser {
                 .status { 
                     font-size: 1em; 
                 }
+                .no-tests {
+                        color: #666;
+                        font-style: italic;
+                        padding: 15px;
+                        background-color: #f5f5f5;
+                        border-left: 4px solid #ddd;
+                    }
                 h1, h2, h3, h4 { margin: 0; }
                 .percentage {
                     font-size: 1.2em;
@@ -127,7 +134,7 @@ public class TestResultParser {
             <div class="header">
                 <h1>Native Image Test Results</h1>
             
-        """;//</div>
+        """;
 
     private static final String HTML_FOOTER = """
             <script>
@@ -185,6 +192,8 @@ public class TestResultParser {
         </body>
         </html>
         """;
+
+    private static final String NO_TESTS = "<p class='no-tests'>No test cases matching this category.</p>";
 
     private static class TestResult {
         String name;
@@ -433,23 +442,38 @@ public class TestResultParser {
             // Test lists by category
             writer.println("<div id='passed-tests' class='test-list'>");
             writer.println("<h3>Passed Tests</h3>");
-            results.stream()
+            List<TestResult> passedTests = results.stream()
                     .filter(r -> "S".equals(r.status))
-                    .forEach(r -> writeTestItem(writer, r));
+                    .collect(Collectors.toList());
+            if (passedTests.isEmpty()) {
+                writer.println(NO_TESTS);
+            } else {
+                passedTests.forEach(r -> writeTestItem(writer, r));
+            }
             writer.println("</div>");
 
             writer.println("<div id='failed-tests' class='test-list'>");
             writer.println("<h3>Failed Tests</h3>");
-            results.stream()
+            List<TestResult> failedTests = results.stream()
                     .filter(r -> "U".equals(r.status))
-                    .forEach(r -> writeTestItem(writer, r));
+                    .collect(Collectors.toList());
+            if (failedTests.isEmpty()) {
+                writer.println(NO_TESTS);
+            } else {
+                failedTests.forEach(r -> writeTestItem(writer, r));
+            }
             writer.println("</div>");
 
             writer.println("<div id='imprecise-tests' class='test-list'>");
             writer.println("<h3>Imprecise Tests</h3>");
-            results.stream()
+            List<TestResult> impreciseTests = results.stream()
                     .filter(r -> "I".equals(r.status))
-                    .forEach(r -> writeTestItem(writer, r));
+                    .collect(Collectors.toList());
+            if (impreciseTests.isEmpty()) {
+                writer.println(NO_TESTS);
+            } else {
+                impreciseTests.forEach(r -> writeTestItem(writer, r));
+            }
             writer.println("</div>");
 
             // Format the footer with actual counts
