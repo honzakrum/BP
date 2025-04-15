@@ -113,7 +113,7 @@ object  CGMatcher {
             val name = AnnotationHelper.getName(annotation)
 
             computedCallSites.find { cs ⇒
-                /*cs.line == line &&*/ cs.declaredTarget.name == name
+                cs.line == line && cs.declaredTarget.name == name
             } match {
                 case Some(computedCallSite) ⇒
 

@@ -187,7 +187,8 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
                 methodId = row("MethodId").toInt,
                 bytecodeIndexes = row("BytecodeIndexes"),
                 targetId = row("TargetId").toInt,
-                isDirect = row("IsDirect").toBoolean
+                isDirect = row("IsDirect").toBoolean,
+                lineNumber = row.get("LineNumbers").flatMap(s => s.toIntOption).getOrElse(-1) // -1 if unknown
             )
         }
     }
@@ -249,7 +250,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
 
                   CallSite(
                       declaredTarget = targetSignatures.head,
-                      line = -1,
+                      line = invocation.lineNumber,
                       pc = None,
                       targets = targetSignatures
                   )
@@ -351,11 +352,12 @@ case class NativeImageMethod(
                             )
 
 case class NativeImageInvocation(
-                                  id: Int,
-                                  methodId: Int,
-                                  bytecodeIndexes: String,
-                                  targetId: Int,
-                                  isDirect: Boolean
+                              id: Int,
+                              methodId: Int,
+                              bytecodeIndexes: String,
+                              targetId: Int,
+                              isDirect: Boolean,
+                              lineNumber: Int
                                 )
 
 case class NativeImageTarget(
