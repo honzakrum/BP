@@ -101,6 +101,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
             "-H:+ReturnAfterAnalysis",
             "-H:PrintAnalysisCallTreeType=CSV",
             s"-H:ConfigurationFileDirectories=${configOutputDir.toString}",
+            s"-H:JudgeJarName=${jarFile.toString}", // disable inlining
             "-jar",
             jarFile.toString
         )
@@ -247,7 +248,7 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
                   }.toSet
 
                   CallSite(
-                      declaredTarget = targetSignatures.head, // is this right?
+                      declaredTarget = targetSignatures.head,
                       line = -1,
                       pc = None,
                       targets = targetSignatures
