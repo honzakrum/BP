@@ -5,10 +5,11 @@ TOOL="NativeImage"
 ALGORITHM="PTA"
 
 # Paths
-JCG_PATH="/home/krumi/IdeaProjects/BP/JCG"
+JCG_PATH="/mnt/extra/IdeaProjects/BP/JCG"
 INPUT_DIR="input"
 OUTPUT_DIR="testcasesOutput/java/native_image_adapter"
 RESOURCE_DIR="jcg_testcases/src/main/resources"
+PARSER_DIR="jcg_native_image_result_parser/src"
 
 # Log files
 TEST_COMPILE="test_compile_output.log"
@@ -30,9 +31,10 @@ sbt -J-Xmx12G "; project jcg_evaluation; runMain FingerprintExtractor -i $JCG_PA
  -o $JCG_PATH/$OUTPUT_DIR -l java -d --adapter $TOOL --algorithm-prefix $ALGORITHM" &> ./$OUTPUT_DIR/$EVALUATION
 echo "NativeImageJCGAdapter analysis completed, debug output in file $JCG_PATH/$OUTPUT_DIR/$EVALUATION."
 
-# timings
-#sbt -J-Xmx12G "; project jcg_evaluation; runMain Evaluation --input $JCG_PATH/$INPUT_DIR --output $JCG_PATH/$OUTPUT_DIR --adapter $TOOL --algorithm-prefix $ALGORITHM"
-
 # format test results
-javac TestResultParser.java
-java TestResultParser $JCG_PATH/$OUTPUT_DIR/NativeImage-PTA.profile $JCG_PATH/$OUTPUT_DIR/$EVALUATION $JCG_PATH/$RESOURCE_DIR/java
+mkdir -p $JCG_PATH/$PARSER_DIR/bin
+find "$JCG_PATH/$PARSER_DIR" -name "*.java" -print0 | xargs -0 javac -d "$JCG_PATH/$PARSER_DIR/bin" # compile
+java -cp "$JCG_PATH/$PARSER_DIR/bin" testreport.Main $JCG_PATH/$OUTPUT_DIR/NativeImage-PTA.profile $JCG_PATH/$OUTPUT_DIR/$EVALUATION $JCG_PATH/$RESOURCE_DIR/java
+
+
+
