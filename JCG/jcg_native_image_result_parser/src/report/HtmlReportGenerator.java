@@ -148,6 +148,11 @@ public class HtmlReportGenerator {
                         background-color: #f5f5f5;
                         border-left: 4px solid #ddd;
                     }
+                .ansi-blue { color: #4f81bd; }
+                .ansi-red { color: #c00000; }
+                .ansi-green { color: #00a000; }
+                .ansi-yellow { color: #b58900; }
+                
                 h1, h2, h3, h4 { margin: 0; }
                 .percentage {
                     font-size: 1.2em;
