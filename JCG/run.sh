@@ -9,7 +9,7 @@ JCG_PATH="/mnt/extra/IdeaProjects/BP/JCG"
 INPUT_DIR="input"
 OUTPUT_DIR="testcasesOutput/java/native_image_adapter"
 RESOURCE_DIR="jcg_testcases/src/main/resources"
-PARSER_DIR="jcg_native_image_result_parser/src"
+PARSER_DIR="jcg_native_image_result_parser"
 
 # Log files
 TEST_COMPILE="test_compile_output.log"
@@ -32,9 +32,15 @@ sbt -J-Xmx12G "; project jcg_evaluation; runMain FingerprintExtractor -i $JCG_PA
 echo "NativeImageJCGAdapter analysis completed, debug output in file $JCG_PATH/$OUTPUT_DIR/$EVALUATION."
 
 # format test results
-mkdir -p $JCG_PATH/$PARSER_DIR/bin
-find "$JCG_PATH/$PARSER_DIR" -name "*.java" -print0 | xargs -0 javac -d "$JCG_PATH/$PARSER_DIR/bin" # compile
-java -cp "$JCG_PATH/$PARSER_DIR/bin" testreport.Main $JCG_PATH/$OUTPUT_DIR/NativeImage-PTA.profile $JCG_PATH/$OUTPUT_DIR/$EVALUATION $JCG_PATH/$RESOURCE_DIR/java
+echo "Building and running the result parser with Maven..."
+cd "$JCG_PATH/$PARSER_DIR" || { echo "Parser directory not found!"; exit 1; }
+mvn clean package
+cd ..
+java -jar "$JCG_PATH/$PARSER_DIR"/target/jcg_native_image_result_parser-1.0-SNAPSHOT.jar \
+    "$JCG_PATH/$OUTPUT_DIR/NativeImage-PTA.profile" \
+    "$JCG_PATH/$OUTPUT_DIR/$EVALUATION" \
+    "$JCG_PATH/$RESOURCE_DIR/java"
+
 
 
 
