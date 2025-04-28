@@ -34,7 +34,13 @@ echo "NativeImageJCGAdapter analysis completed, debug output in file $JCG_PATH/$
 # format test results
 echo "Building and running the result parser with Maven..."
 cd "$JCG_PATH/$PARSER_DIR" || { echo "Parser directory not found!"; exit 1; }
-mvn clean package
+# using maven wrapper if maven is not installed
+if [ -f "./mvnw" ]; then
+    MAVEN="./mvnw"
+else
+    MAVEN="mvn"
+fi
+$MAVEN clean package
 cd ..
 java -jar "$JCG_PATH/$PARSER_DIR"/target/jcg_native_image_result_parser-1.0-SNAPSHOT.jar \
     "$JCG_PATH/$OUTPUT_DIR/NativeImage-PTA.profile" \
