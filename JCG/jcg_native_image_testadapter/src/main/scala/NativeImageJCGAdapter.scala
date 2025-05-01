@@ -22,11 +22,8 @@ object NativeImageJCGAdapter extends JavaTestAdapter {
         val startTime = System.nanoTime()
 
         // Get bin paths of Graal and Native Image
-        val (graalJavaPath, nativeImagePath) = ConfigLoader.loadConfig() match {
-            case Right(cfg) =>
-                (Paths.get(cfg.paths.graalJava), Paths.get(cfg.paths.nativeImage))
-            case Left(err) => throw new RuntimeException(err)
-        }
+        val (graalJavaPath, nativeImagePath) = GraalPathResolver.resolveGraalPaths()
+
         // Directory for native image reachability metadata
         val configDirectory = Paths.get("./config")
         // Current testcase

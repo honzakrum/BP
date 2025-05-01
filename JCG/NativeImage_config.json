@@ -1,6 +1,0 @@
-{
-  "paths": {
-    "graalJava": "/home/krumi/.sdkman/candidates/java/25.ea.8-graal/bin/java",
-    "nativeImage": "/home/krumi/.sdkman/candidates/java/25.ea.8-graal/bin/native-image"
-  }
-}
