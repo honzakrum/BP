@@ -29,3 +29,5 @@ local.sbt
 /input
 /testcasesOutput
 /config
+/subset_input
+/.bsp
