@@ -7,18 +7,55 @@
 - **Faculty**: Faculty of Information Technology
 - **Supervisor**: Ing. David Kozák
 
-## Project Setup and Execution
+---
+
+## Project Overview
+
+This project extends the [OPAL JCG project](https://github.com/opalj/JCG) to support call graph extraction and points-to analysis for programs compiled with **GraalVM Native Image**.
+
+### Contributions
+
+The key components developed as part of this work:
+
+- **`jcg_native_image_testadapter`**  
+  A custom adapter for integrating Native Image reachability metadata into JCG’s analysis pipeline.
+
+- **`jcg_native_image_result_parser`**  
+  A parser that interprets Native Image call graph CSVs and converts them into the format required by JCG’s evaluation framework.
+
+---
+
+## Setup and Execution
 
 ### Prerequisites
-- Java 8+ JDK installed
-- GraalVM installed (for native image compilation)
-- SDKMAN! recommended for Java version management
-- sbt version 1.10.7
 
-### Configuration
+- Java 8+ JDK
+- [GraalVM](https://www.graalvm.org/) (must include `native-image`)
+- [SDKMAN!](https://sdkman.io) for managing multiple Java versions (optional but recommended)
+- sbt `1.10.7`
+- Maven (or Maven Wrapper)
+- `mx` build tool (used to drive the analysis pipeline)
 
-1. **Create `jre.conf`** in the JCG root folder with 
-your Java installations, example:
+---
+
+### Environment Configuration
+
+1. **Set `GRAAL_HOME` environment variable**
+
+```bash
+export GRAAL_HOME=/path/to/your/graalvm
+```
+
+Make sure it includes:
+
+```
+$GRAAL_HOME/bin/java
+
+$GRAAL_HOME/bin/native-image
+```
+2. **Create `jre.conf` in the JCG repo**
+
+This file lists the JDKs used by the JCG test framework. Example contents:
 
 ```json
 [
@@ -27,36 +64,105 @@ your Java installations, example:
     "path": "/path/to/java/8.0.442-tem"
   },
   {
-    "version": 17, 
+    "version": 17,
     "path": "/path/to/java/17.0.8-tem"
   }
 ]
 ```
+This file is used by JCG to configure JDK versions for analysis.
 
-2. **Adjust `NativeImage_config.json`** for GraalVM java and Native 
-Image executable paths.
+---
 
-3. **Adjust `run.sh`** for your JCG path:
-```bash   
-JCG_PATH="/path/to/JCG" 
-```
-### Execution
-Make the run script executable and run it in the JCG folder:
+### Running the Pipeline via `mx judge`
+All commands are invoked using the `mx` tool via a custom `judge` command.
+
+> ⚠️ **Important:** Make sure you're inside the `substratevm` suite, or that it’s registered with `mx`.
+
+
+
+### Compile All Testcases
+
+Compiles all Java test cases defined in JCG:
 
 ```bash
-./run.sh
+mx judge compile --jcg-path /path/to/JCG --mem-limit 16G
 ```
 
-### Output
-Result of the testcases will be in `test_results.html` by default, additional information in 
-the folder JCG/testcasesOutput.
+- Output is stored in:  
+  `/path/to/JCG/testcasesOutput/java/native_image_adapter/test_compile_output.log`
+
+
+
+### Run Evaluation
+
+#### Run all compiled tests
+
+```bash
+mx judge run --jcg-path /path/to/JCG
+```
+
+#### Run a specific category of tests
+
+```bash
+mx judge run --jcg-path /path/to/JCG --category CFNE
+```
+
+Examples of categories: `CSR`, `DFNE`, `Ser`, `JVMC`, etc.
+
+#### Run a specific single test
+
+```bash
+mx judge run --jcg-path /path/to/JCG --test CFNE3
+```
+
+> Test files must exist as `CFNE3.jar` and `CFNE3.conf` in the input folder.
+
+#### Control memory limit
+
+All commands accept the `--mem-limit` option, default is 12G:
+
+```bash
+mx judge compile --jcg-path /path/to/JCG --mem-limit 24G
+mx judge run --jcg-path /path/to/JCG --mem-limit 24G
+```
+
+
+
+#### Clone JCG Repo
+
+This feature allows you to automatically clone this repository into a target directory:
+
+```bash
+mx judge clone --into /target/folder
+```
+
+---
+
+## Output
+
+- **Evaluation log**:  
+  `testcasesOutput/java/native_image_adapter/evaluation.log`
+
+- **Parsed results**:  
+  Path to the `HTML report` is printed to console after evaluation.
+
+
+---
 
 ## Intentionally Excluded Test Cases
-The following tests are currently not expected to pass and/or are not supported :
 
-1. **Infrastructure incompatible testcases**
-   - Not supported by the test pipeline.
+Some test cases are known to be incompatible with GraalVM Native Image or the evaluation infrastructure:
 
-2. **CL4**
-   - This test case defines a custom classloader, that loads the class `lib.IntComparator`
-     from a byte array. This feature is not supported by GraalVM Native Image.
+### Infrastructure-Incompatible test cases
+
+These testcases use dynamic features unsupported by native image builds (e.g., dynamic classloaders, bytecode injection).
+
+
+---
+
+
+## Acknowledgements
+
+This project is built on top of the [OPAL JCG framework](https://github.com/opalj/JCG).  
+All integration work for GraalVM Native Image was done as part of the author’s thesis.
+
