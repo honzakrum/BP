@@ -1,54 +1,51 @@
 #!/bin/bash
 
 # Positional parameters
-JCG_PATH=$1
-INPUT_DIR=$2
-MEM_LIMIT="${3:-12G}"
-# note - expecting the validation in the mx tool, not here
+JCG_PATH="$1"
+INPUT_DIR="$2"         # Expected: input/java or subset_input/java
+MEM_LIMIT="${3:-12G}"  # Default to 12G if not provided
 
 # Constants
-TOOL="NativeImage"      
+TOOL="NativeImage"
 ALGORITHM="PTA"
 OUTPUT_DIR="testcasesOutput/java/native_image_adapter"
-RESOURCE_DIR="jcg_testcases/src/main/resources"
 PARSER_DIR="jcg_native_image_result_parser"
+EVALUATION_LOG="$OUTPUT_DIR/evaluation.log"
+PROFILE_FILE="$OUTPUT_DIR/NativeImage-PTA.profile"
+RESOURCE_DIR="jcg_testcases/src/main/resources"
 
-# Log files
-TEST_COMPILE="test_compile_output.log"
-EVALUATION="evaluation_fingerprint.log"
-
+# Move into JCG repo root
+cd "$JCG_PATH" || { echo "[error] Could not cd into $JCG_PATH"; exit 1; }
 mkdir -p "$OUTPUT_DIR"
 
-# compile tests
-echo "Compiling JCG tests..."
-touch ./$OUTPUT_DIR/$TEST_COMPILE
-sbt -J-Xmx"$MEM_LIMIT" "project jcg_testcases" "runMain TestCaseExtractor --rsrcDir ./$RESOURCE_DIR
---outDir ./$INPUT_DIR --lang java --debug" &> ./$OUTPUT_DIR/$TEST_COMPILE
-echo "JCG tests compiled, compile output in file $JCG_PATH/$OUTPUT_DIR/$TEST_COMPILE."
+# --- Run evaluation ---
+echo "[info] Running NativeImageJCGAdapter analysis..."
+touch "$EVALUATION_LOG"
+sbt -J-Xmx"$MEM_LIMIT" "; project jcg_evaluation; runMain FingerprintExtractor -i $JCG_PATH/$INPUT_DIR \
+  -o $JCG_PATH/$OUTPUT_DIR -l java -d --adapter $TOOL --algorithm-prefix $ALGORITHM" &> "$EVALUATION_LOG"
 
-# run analysis
-echo "Running analysis with NativeImageJCGAdapter..."
-touch ./$OUTPUT_DIR/$EVALUATION
-sbt -J-Xmx"$MEM_LIMIT" "; project jcg_evaluation; runMain FingerprintExtractor -i $JCG_PATH/$INPUT_DIR/java
- -o $JCG_PATH/$OUTPUT_DIR -l java -d --adapter $TOOL --algorithm-prefix $ALGORITHM" &> ./$OUTPUT_DIR/$EVALUATION
-echo "NativeImageJCGAdapter analysis completed, debug output in file $JCG_PATH/$OUTPUT_DIR/$EVALUATION."
+if [ $? -ne 0 ]; then
+    echo "[error] Evaluation failed. Check $EVALUATION_LOG"
+    exit 1
+fi
 
-# format test results
-echo "Building and running the result parser with Maven..."
-cd "$JCG_PATH/$PARSER_DIR" || { echo "Parser directory not found!"; exit 1; }
-# using maven wrapper if maven is not installed
+echo "[done] Evaluation completed. Log written to: $EVALUATION_LOG"
+
+# --- Parse results ---
+echo "[info] Building and running the result parser..."
+cd "$PARSER_DIR" || { echo "[error] Parser directory not found at $PARSER_DIR"; exit 1; }
+
+# Use Maven wrapper if present
 if [ -f "./mvnw" ]; then
     MAVEN="./mvnw"
 else
     MAVEN="mvn"
 fi
-$MAVEN clean package
+
+$MAVEN clean package || { echo "[error] Maven build failed"; exit 1; }
+
 cd ..
-java -jar "$JCG_PATH/$PARSER_DIR"/target/jcg_native_image_result_parser-1.0-SNAPSHOT.jar \
-    "$JCG_PATH/$OUTPUT_DIR/NativeImage-PTA.profile" \
-    "$JCG_PATH/$OUTPUT_DIR/$EVALUATION" \
-    "$JCG_PATH/$RESOURCE_DIR/java"
+java -jar "$PARSER_DIR/target/jcg_native_image_result_parser-1.0-SNAPSHOT.jar" \
+    "$PROFILE_FILE" "$EVALUATION_LOG" "$RESOURCE_DIR/java"
 
-
-
-
+echo "[done] Result parsing completed."
