@@ -7,8 +7,6 @@
 - **Faculty**: Faculty of Information Technology
 - **Supervisor**: Ing. David Kozák
 
----
-
 ## Project Overview
 
 This project extends the [OPAL JCG project](https://github.com/opalj/JCG) to support call graph extraction and points-to analysis for programs compiled with **GraalVM Native Image**.
@@ -23,8 +21,6 @@ The key components developed as part of this work:
 - **`jcg_native_image_result_parser`**  
   A parser that interprets Native Image call graph CSVs and converts them into the format required by JCG’s evaluation framework.
 
----
-
 ## Setup and Execution
 
 ### Prerequisites
@@ -35,8 +31,6 @@ The key components developed as part of this work:
 - sbt `1.10.7`
 - Maven (or Maven Wrapper)
 - `mx` build tool (used to drive the analysis pipeline)
-
----
 
 ### Environment Configuration
 
@@ -71,7 +65,6 @@ This file lists the JDKs used by the JCG test framework. Example contents:
 ```
 This file is used by JCG to configure JDK versions for analysis.
 
----
 
 ### Running the Pipeline via `mx judge`
 All commands are invoked using the `mx` tool via a custom `judge` command.
@@ -119,13 +112,32 @@ mx judge run --jcg-path /path/to/JCG --test CFNE3
 
 #### Control memory limit
 
-All commands accept the `--mem-limit` option, default is 12G:
+All commands except the `clean` accept the `--mem-limit` option, default is 12G:
 
 ```bash
 mx judge compile --jcg-path /path/to/JCG --mem-limit 24G
 mx judge run --jcg-path /path/to/JCG --mem-limit 24G
 ```
 
+#### Clean Project Artifacts
+
+You can remove generated files and reset the repository to a clean state using:
+
+```bash
+mx judge clean --jcg-path /path/to/JCG
+```
+
+This performs the following actions:
+
+- Runs `sbt clean` to delete all `target/` directories
+- Deletes the following folders if they exist:
+  - `input/`
+  - `subset_input/`
+  - `testcasesOutput/`
+  - `config/`
+  - `CallGraphs/`
+
+Use this command when you want to start with a clean slate, especially before recompiling test cases or rerunning evaluations.
 
 
 #### Clone JCG Repo
@@ -136,8 +148,6 @@ This feature allows you to automatically clone this repository into a target dir
 mx judge clone --into /target/folder
 ```
 
----
-
 ## Output
 
 - **Evaluation log**:  
@@ -147,8 +157,6 @@ mx judge clone --into /target/folder
   Path to the `HTML report` is printed to console after evaluation.
 
 
----
-
 ## Intentionally Excluded Test Cases
 
 Some test cases are known to be incompatible with GraalVM Native Image or the evaluation infrastructure:
@@ -157,8 +165,6 @@ Some test cases are known to be incompatible with GraalVM Native Image or the ev
 
 These testcases use dynamic features unsupported by native image builds (e.g., dynamic classloaders, bytecode injection).
 
-
----
 
 
 ## Acknowledgements
