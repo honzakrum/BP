@@ -1,5 +1,10 @@
 package testreport.model;
 
+/**
+ * Enumeration of possible evaluation outcomes for a test case.
+ *
+ * @author Jan Křůmal
+ */
 public enum TestStatus {
     PASSED, FAILED, IMPRECISE;
 

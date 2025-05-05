@@ -2,13 +2,23 @@ package testreport.model;
 
 import java.nio.file.Path;
 
+/**
+ * Represents a single test case result within the Native Image evaluation framework.
+ *
+ * Stores:
+ * - Test name and evaluation status.
+ * - Enriched metadata including readable description, code example, logs, and matcher output.
+ * - Paths to generated artifacts such as JSON call graph, CSVs, and configuration files.
+ *
+ * @author Jan Křůmal
+ */
 public class TestResult {
     private String name;
     private TestStatus status;
     private String description = "No description available";
     private String testCase = "No test case details available";
-    private String log = "";
-    private String matcherOutput = "";
+    private String log = "No log available";
+    private String matcherOutput = "No matcher output available";
 
     private Path jsonPath;
     private Path csvMethods;
@@ -21,7 +31,6 @@ public class TestResult {
         this.status = status;
     }
 
-    // --- Getters and Setters ---
     public String getName() { return name; }
     public TestStatus getStatus() { return status; }
     public String getDescription() { return description; }

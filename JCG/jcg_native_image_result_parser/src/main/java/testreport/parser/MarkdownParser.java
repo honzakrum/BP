@@ -8,6 +8,14 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.regex.*;
 
+/**
+ * Parses markdown documentation and enriches each [[TestResult]] with a description and code snippet.
+ *
+ * Scans all markdown files in the provided directory, matches test case sections by header name (## TestName),
+ * extracts formatted descriptions and code blocks, and applies HTML-safe transformations.
+ *
+ * @author Jan Křůmal
+ */
 public class MarkdownParser {
 
     public void enrichWithMarkdown(Path markdownDir, List<TestResult> results) throws IOException {

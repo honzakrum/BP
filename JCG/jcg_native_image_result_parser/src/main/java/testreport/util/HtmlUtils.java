@@ -5,6 +5,11 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility class for converting raw log strings that could contain ANSI escape codes into HTML-safe output.
+ *
+ * @author Jan Křůmal
+ */
 public class HtmlUtils {
 
     /**

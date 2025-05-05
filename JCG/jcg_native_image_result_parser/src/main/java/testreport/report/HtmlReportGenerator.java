@@ -10,6 +10,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * Generates an interactive HTML report from a list of parsed test results.
+ *
+ * The report includes summary statistics, categorized test listings (Passed, Failed, Imprecise),
+ * expandable details for each test case (including logs, descriptions, and links to artifacts),
+ * and dynamic filtering using JavaScript.
+ *
+ * This class assumes the presence of structured data provided via [[TestResult]] objects,
+ * enriched by logs and markdown annotations, and supports direct links to serialized
+ * call graphs and configuration files.
+ *
+ * @author Jan Křůmal
+ */
 public class HtmlReportGenerator {
 
     private static final String NO_TESTS = "<p class='no-tests'>No test cases matching this category.</p>";

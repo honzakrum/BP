@@ -8,6 +8,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+/**
+ * Parses and attaches execution log data to each [[TestResult]].
+ *
+ * Extracts log output and CG matcher segments from a structured test log file.
+ * The logs are processed into HTML-safe strings and injected into their corresponding
+ * test cases for later rendering in the HTML report.
+ *
+ * Assumes logs follow a recognizable format with lines like "performing test case:"
+ * and "[info][CG matcher]".
+ *
+ * @author Jan Křůmal
+ */
 public class LogParser {
 
     public void enrichWithLogs(Path logFile, List<TestResult> results) throws IOException {

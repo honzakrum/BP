@@ -9,6 +9,25 @@ import testreport.report.HtmlReportGenerator;
 import java.nio.file.*;
 import java.util.List;
 
+/**
+ * Entry point for the Native Image test result processing and report generation tool.
+ *
+ * This class parses evaluation results, execution logs, and markdown summaries,
+ * then produces a comprehensive HTML report.
+ *
+ * Usage:
+ * java -jar app.jar <results_file> <log_file> <markdown_dir> [output.html]
+ *
+ * Expects:
+ * - Profile file with evaluation data.
+ * - Log file with information about test executation.
+ * - Directory with markdown test suites.
+ *
+ * Optional:
+ * - Output HTML file path (defaults to 'test_results.html').
+ *
+ * @author Jan Křůmal
+ */
 public class Main {
     public static void main(String[] args) {
         if (args.length < 3) {
@@ -21,7 +40,6 @@ public class Main {
         Path markdownDir = Paths.get(args[2]);
         Path outputPath = args.length > 3 ? Paths.get(args[3]) : Paths.get("test_results.html");
 
-        // Sanity check
         if (!Files.exists(resultsPath)) {
             System.err.println("Error: Results file not found: " + resultsPath);
             return;
