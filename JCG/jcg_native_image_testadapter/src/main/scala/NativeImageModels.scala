@@ -1,5 +1,8 @@
-// NativeImage-specific case classes for CSV parsing
-
+/**
+ * Case classes for parsing and representing Native Image call graph CSV outputs.
+ *
+ * @author Jan Křůmal
+ */
 case class NativeImageMethod
 (
   id: Int,

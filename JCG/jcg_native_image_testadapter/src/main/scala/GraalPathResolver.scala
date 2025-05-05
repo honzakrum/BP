@@ -1,5 +1,13 @@
 import java.nio.file.{Files, Path, Paths}
 
+/**
+ * Utility object to resolve GraalVM-related executable paths.
+ *
+ * Resolves `java` and `native-image` executables based on the `GRAAL_HOME`
+ * environment variable. Terminates the program if paths are invalid.
+ *
+ * @author Jan Křůmal
+ */
 object GraalPathResolver {
 
   def resolveGraalPaths(): (Path, Path) = {

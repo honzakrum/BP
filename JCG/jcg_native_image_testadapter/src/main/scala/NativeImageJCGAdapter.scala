@@ -7,6 +7,20 @@ import play.api.libs.json.{Format, Json}
 import org.apache.commons.csv.{CSVFormat, CSVParser}
 import scala.jdk.CollectionConverters._
 
+/**
+ * A [[JavaTestAdapter]] for the Native Image-based call graph generation.
+ *
+ * This adapter orchestrates the generation of reachability metadata, execution of the
+ * Native Image tool with analysis options enabled, and transforms the resulting call
+ * tree data (in CSV format) into the unified [[ReachableMethods]] data model.
+ *
+ * It is primarily intended for evaluating static call graphs via GraalVM’s
+ * Ahead-Of-Time (AOT) compilation process with support for Points-To Analysis (PTA).
+ *
+ * Requires a valid GraalVM distribution with Native Image and native-image-agent components.
+ *
+ * @author Jan Křůmal
+ */
 object NativeImageJCGAdapter extends JavaTestAdapter {
 
     val frameworkName: String = "NativeImage"
