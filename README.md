@@ -16,10 +16,10 @@ This project extends the [OPAL JCG project](https://github.com/opalj/JCG) to sup
 The key components developed as part of this work:
 
 - **`jcg_native_image_testadapter`**  
-  A custom adapter for integrating Native Image reachability metadata into JCG’s analysis pipeline.
+  A specialized adapter that integrates GraalVM Native Image analysis results into the JCG (Java Call Graph) analysis pipeline. This component is responsible for orchestrating the execution of Native Image analysis,   including the generation of configuration files and execution parameters. It ensures compatibility with the JCG framework by producing call graphs in the required format.
 
 - **`jcg_native_image_result_parser`**  
-  A parser that interprets Native Image call graph CSVs and converts them into the format required by JCG’s evaluation framework.
+  This parser transforms raw profiling results, logs, and call graph data into a structured and navigable HTML report, providing clear visualization and easier analysis of the JCG produced results.
 
 ## Setup and Execution
 
@@ -55,12 +55,9 @@ This file lists the JDKs used by the JCG test framework. Example contents:
 [
   {
     "version": 8,
-    "path": "/path/to/java/8.0.442-tem"
+    "path": "/path/to/java/8"
   },
-  {
-    "version": 17,
-    "path": "/path/to/java/17.0.8-tem"
-  }
+  ...
 ]
 ```
 This file is used by JCG to configure JDK versions for analysis.
@@ -70,7 +67,6 @@ This file is used by JCG to configure JDK versions for analysis.
 All commands are invoked using the `mx` tool via a custom `judge` command.
 
 > ⚠️ **Important:** Make sure you're inside the `substratevm` suite, or that it’s registered with `mx`.
-
 
 
 ### Compile All Testcases
@@ -161,10 +157,12 @@ mx judge clone --into /target/folder
 
 Some test cases are known to be incompatible with GraalVM Native Image or the evaluation infrastructure:
 
-### Infrastructure-Incompatible test cases
+### Infrastructure-Incompatible Test Cases
 
-These testcases use dynamic features unsupported by native image builds (e.g., dynamic classloaders, bytecode injection).
+Require special build steps (e.g., Scala compilation, bytecode engineering) incompatible with the standard pipeline.
 
+### LIB Test Cases
+Standalone libraries without a `main` method; cannot produce native binaries without an entry point.
 
 
 ## Acknowledgements
