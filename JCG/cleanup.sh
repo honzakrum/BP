@@ -24,4 +24,10 @@ for folder in "${FOLDERS[@]}"; do
   fi
 done
 
+# Check and delete results as well
+if [ -f "test_results.html" ]; then
+  echo "[info] Deleting file: test_results.html"
+  rm -f "test_results.html"
+fi
+
 echo "[done] Cleanup complete."

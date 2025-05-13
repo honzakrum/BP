@@ -11,6 +11,7 @@ ALGORITHM="PTA"
 OUTPUT_DIR="testcasesOutput/java/native_image_adapter"
 PARSER_DIR="jcg_native_image_result_parser"
 EVALUATION_LOG="$OUTPUT_DIR/evaluation.log"
+BUILD_LOG="$OUTPUT_DIR/maven_build.log"
 PROFILE_FILE="$OUTPUT_DIR/NativeImage-PTA.profile"
 RESOURCE_DIR="jcg_testcases/src/main/resources"
 
@@ -20,7 +21,6 @@ mkdir -p "$OUTPUT_DIR"
 
 # --- Run evaluation ---
 echo "[info] Running NativeImageJCGAdapter analysis..."
-touch "$EVALUATION_LOG"
 sbt -J-Xmx"$MEM_LIMIT" "; project jcg_evaluation; runMain FingerprintExtractor -i $JCG_PATH/$INPUT_DIR \
   -o $JCG_PATH/$OUTPUT_DIR -l java -d --adapter $TOOL --algorithm-prefix $ALGORITHM" &> "$EVALUATION_LOG"
 
@@ -42,7 +42,15 @@ else
     MAVEN="mvn"
 fi
 
-$MAVEN clean package || { echo "[error] Maven build failed"; exit 1; }
+echo "[info] Maven build started for the result parser. Output redirected to $BUILD_LOG"
+
+$MAVEN clean package &> "../$BUILD_LOG"
+if [ $? -ne 0 ]; then
+    echo "[error] Maven build failed. Check the log at $BUILD_LOG"
+    exit 1
+fi
+
+echo "[info] Maven build completed successfully."
 
 cd ..
 java -jar "$PARSER_DIR/target/jcg_native_image_result_parser-1.0-SNAPSHOT.jar" \
