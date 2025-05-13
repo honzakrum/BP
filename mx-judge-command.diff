@@ -1,0 +1,153 @@
+diff --git a/substratevm/mx.substratevm/mx_substratevm.py b/substratevm/mx.substratevm/mx_substratevm.py
+index 636fe20fabf..31227a4da2a 100644
+--- a/substratevm/mx.substratevm/mx_substratevm.py
++++ b/substratevm/mx.substratevm/mx_substratevm.py
+@@ -2531,3 +2531,147 @@ def capnp_compile(args):
+                 break
+             f.write(line)
+         f.write('}\n')
++
++@mx.command(suite_name=suite.name, command_name='judge', usage_msg='run [options]')
++def judge(args):
++    """
++    Judge (JCG) evaluation pipeline command.
++    """
++    if not args:
++        mx.abort("""Missing subcommand.
++
++        Usage:
++            mx judge run --jcg-path <path> [--category CFNE | --test CFNE2] [--mem-limit 16G]
++            mx judge compile --jcg-path <path> [--mem-limit 16G]
++            mx judge clean --jcg-path <path>
++            mx judge clone --into <path>
++        """)
++
++    subcommand = args[0]
++    sub_args = args[1:]
++
++    if subcommand == 'run':
++        _run_judge(sub_args)
++    elif subcommand == 'compile':
++        _compile_jcg(sub_args)
++    elif subcommand == 'clone':
++        _clone_jcg(sub_args)
++    elif subcommand == 'clean':
++        _clean_jcg(sub_args)
++    else:
++        mx.abort(f"Unknown subcommand: {subcommand}")
++
++def _compile_jcg(sub_args):
++    parser = ArgumentParser(prog='mx judge compile', description='Compile JCG testcases.')
++    parser.add_argument('--jcg-path', required=True, help='Path to the JCG repository.')
++    parser.add_argument('--mem-limit', default='12G', help='Max heap size for sbt (e.g., 16G).')
++
++    args = parser.parse_args(sub_args)
++
++    compile_script = pathlib.Path(args.jcg_path).resolve() / "compile_tests.sh"
++
++    if not compile_script.exists():
++        mx.abort(f"[ERROR] Cannot find compile_tests.sh at {compile_script}")
++
++    cmd = [str(compile_script), args.jcg_path, args.mem_limit]
++
++    mx.logv(f"[debug] Running compile script: {' '.join(shlex.quote(c) for c in cmd)}")
++    mx.run(cmd)
++
++def _run_judge(sub_args):
++    parser = ArgumentParser(prog='mx judge run', description='Run the NativeImageJCGAdapter evaluation pipeline.')
++    parser.add_argument('--jcg-path', required=True, help='Path to the JCG repository.')
++    parser.add_argument('--mem-limit', default='12G', help='Max heap size for sbt.')
++    parser.add_argument('--category', help='Run a subset of tests matching category prefix (e.g., CFNE).')
++    parser.add_argument('--test', help='Run a single test by base name (e.g., CFNE3).')
++
++    args = parser.parse_args(sub_args)
++
++    if args.category and args.test:
++        mx.abort("Please specify only one of --category or --test, not both.")
++
++    jcg_path = pathlib.Path(args.jcg_path).resolve()
++    input_dir = jcg_path / "input" / "java"
++    subset_dir = jcg_path / "subset_input" / "java"
++    run_script = jcg_path / "run.sh"
++
++    if not run_script.exists():
++        mx.abort(f"[ERROR] Cannot find run.sh at {run_script}")
++
++    actual_input = input_dir
++
++    if args.category or args.test:
++        subset_dir.mkdir(parents=True, exist_ok=True)
++        _clean_directory(subset_dir)
++
++        if args.category:
++            prefix = args.category
++            matched = list(input_dir.glob(f"{prefix}*"))
++            if not matched:
++                mx.abort(f"No test files found for category prefix: {prefix}")
++            for file in matched:
++                shutil.copy(file, subset_dir)
++            actual_input = subset_dir
++            mx.log(f"[info] Using test subset from category: {prefix}")
++
++        elif args.test:
++            base = args.test
++            jar_file = input_dir / f"{base}.jar"
++            conf_file = input_dir / f"{base}.conf"
++
++            missing = [f for f in [jar_file, conf_file] if not f.exists()]
++            if missing:
++                mx.abort(f"Missing test files for '{base}': {', '.join(str(m.name) for m in missing)}")
++
++            shutil.copy(jar_file, subset_dir / jar_file.name)
++            shutil.copy(conf_file, subset_dir / conf_file.name)
++            actual_input = subset_dir
++            mx.log(f"[info] Using single test: {base}")
++
++    input_dir_name = actual_input.relative_to(jcg_path).as_posix()  # 'input' or 'subset_input'
++
++    cmd = [str(run_script), str(jcg_path), input_dir_name, args.mem_limit]
++
++    mx.logv(f"[debug] Invoking script: {' '.join(shlex.quote(c) for c in cmd)}")
++    mx.run(cmd)
++
++def _clone_jcg(sub_args):
++    parser = ArgumentParser(prog='mx judge clone', description='Clone the JCG repository into a target folder.')
++    parser.add_argument('--into', required=True, help='Target folder to clone the JCG repository into.')
++
++    args = parser.parse_args(sub_args)
++    target_path = pathlib.Path(args.into).resolve()
++
++    if target_path.exists():
++        mx.abort(f"Target folder already exists: {target_path}")
++
++    repo_url = "https://github.com/honzakrum/BP.git"
++    clone_cmd = f"git clone {shlex.quote(repo_url)} {shlex.quote(str(target_path))}"
++
++    mx.log(f"[info] Cloning JCG from {repo_url} into {target_path}...")
++    exit_code = os.system(clone_cmd)
++    if exit_code != 0:
++        mx.abort(f"[error] Git clone failed with exit code {exit_code}")
++    mx.log("[done] Clone complete.")
++
++def _clean_jcg(sub_args):
++    parser = ArgumentParser(prog='mx judge clean', description='Clean build files and test outputs from the JCG repo.')
++    parser.add_argument('--jcg-path', required=True, help='Path to the JCG repository.')
++
++    args = parser.parse_args(sub_args)
++    script_path = pathlib.Path(args.jcg_path).resolve() / "cleanup.sh"
++
++    if not script_path.exists():
++        mx.abort(f"[error] cleanup.sh not found at {script_path}")
++
++    cmd = f"{shlex.quote(str(script_path))} {shlex.quote(str(args.jcg_path))}"
++    mx.logv(f"[debug] Executing: {cmd}")
++    exit_code = os.system(cmd)
++    if exit_code != 0:
++        mx.abort(f"[error] Cleanup script failed with exit code {exit_code}")
++    mx.log("[done] JCG repository cleaned.")
++
++def _clean_directory(directory: pathlib.Path):
++    for file in directory.iterdir():
++        if file.is_file():
++            file.unlink()
+\ No newline at end of file
