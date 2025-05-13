@@ -66,8 +66,12 @@ This file is used by JCG to configure JDK versions for analysis.
 ### Running the Pipeline via `mx judge`
 All commands are invoked using the `mx` tool via a custom `judge` command.
 
-> ⚠️ **Important:** Make sure you're inside the `substratevm` suite, or that it’s registered with `mx`.
+> ⚠️ **Important:** Make sure you're inside the `substratevm` suite of GraalVM, or that it’s registered with `mx`.
 
+#### Enabling the `judge` Command
+
+To enable the `judge` command, apply the `mx-judge-command.diff` patch.  
+This patch should be applied to the `/substratevm/mx.substratevm/mx_substratevm.py` file.
 
 ### Compile All Testcases
 
